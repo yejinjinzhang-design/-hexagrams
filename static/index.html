@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>加密货币价格监测</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --accent: #58a6ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.875rem;
+      margin-bottom: 1.5rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .price-main {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .price-main .currency { color: var(--muted); font-size: 1rem; }
+    .meta { font-size: 0.8rem; color: var(--muted); }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+    }
+    .row:last-child { border-bottom: none; }
+    .label { color: var(--muted); }
+    .value.up { color: var(--green); }
+    .value.down { color: var(--red); }
+    .comparisons .row .value { color: var(--accent); }
+    .loading { color: var(--muted); text-align: center; padding: 2rem; }
+    .error { color: var(--red); padding: 1rem; }
+    .refresh { font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>加密货币价格监测</h1>
+    <p class="sub">BTC 实时价格与 24h / 历史高低对比（数据来源: CoinGecko）</p>
+    <div id="root">
+      <div class="card loading">正在加载…</div>
+    </div>
+    <p class="refresh" id="refreshHint">每 30 秒自动刷新</p>
+  </div>
+  <script>
+    const root = document.getElementById('root');
+    const refreshHint = document.getElementById('refreshHint');
+    const INTERVAL_MS = 30000;
+
+    function formatNum(n) {
+      if (n >= 1) return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return Number(n).toFixed(6);
+    }
+
+    function render(data) {
+      const up = data.change_24h >= 0;
+      root.innerHTML = `
+        <div class="card">
+          <div class="price-main">${formatNum(data.current)} <span class="currency">${(data.currency || 'usd').toUpperCase()}</span></div>
+          <div class="meta">${data.name} (${data.symbol}) · 更新于 ${data.last_updated || '-'}</div>
+        </div>
+        <div class="card">
+          <div class="row"><span class="label">24h 最高</span><span class="value">${formatNum(data.high_24h)}</span></div>
+          <div class="row"><span class="label">24h 最低</span><span class="value">${formatNum(data.low_24h)}</span></div>
+          <div class="row"><span class="label">24h 涨跌</span><span class="value ${up ? 'up' : 'down'}">${(up ? '+' : '') + formatNum(data.change_24h)} (${(data.change_pct_24h >= 0 ? '+' : '') + Number(data.change_pct_24h).toFixed(2)}%)</span></div>
+        </div>
+        <div class="card comparisons">
+          <div class="row"><span class="label">低于 24h 最高</span><span class="value">${formatNum(data.vs_high_24h_amount)} (${Number(data.vs_high_24h_pct).toFixed(2)}%)</span></div>
+          <div class="row"><span class="label">高于 24h 最低</span><span class="value">${formatNum(data.vs_low_24h_amount)} (${Number(data.vs_low_24h_pct).toFixed(2)}%)</span></div>
+          <div class="row"><span class="label">低于历史最高 (ATH)</span><span class="value">${formatNum(data.vs_ath_amount)} (${Number(data.vs_ath_pct).toFixed(2)}%)</span></div>
+          <div class="row"><span class="label">高于历史最低 (ATL)</span><span class="value">${formatNum(data.vs_atl_amount)} (${Number(data.vs_atl_pct).toFixed(2)}%)</span></div>
+        </div>
+      `;
+    }
+
+    function fetchAndRender() {
+      fetch('/api/snapshot?coin=bitcoin&currency=usd')
+        .then(r => r.ok ? r.json() : Promise.reject(new Error(r.statusText)))
+        .then(data => {
+          render(data);
+          refreshHint.textContent = '每 30 秒自动刷新 · 上次: ' + new Date().toLocaleTimeString('zh-CN');
+        })
+        .catch(err => {
+          root.innerHTML = `<div class="card error">获取数据失败: ${err.message}</div>`;
+        });
+    }
+
+    fetchAndRender();
+    setInterval(fetchAndRender, INTERVAL_MS);
+  </script>
+</body>
+</html>

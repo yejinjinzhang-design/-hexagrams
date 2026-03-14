@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    ui-sans-serif, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@keyframes soft-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-soft-spin {
+  animation: soft-spin 0.8s linear infinite;
+}
+
+/* 铜钱 3D 翻面：1.8s 左右，translateZ(0) 防残影，无抖动 */
+@keyframes coin-spin-to-front {
+  0% {
+    transform: translateZ(0) translateY(0) rotateX(0deg) rotateY(0deg);
+  }
+  10% {
+    transform: translateZ(0) translateY(-8px) rotateX(36deg) rotateY(72deg);
+  }
+  100% {
+    transform: translateZ(0) translateY(0) rotateX(360deg) rotateY(720deg);
+  }
+}
+
+@keyframes coin-spin-to-back {
+  0% {
+    transform: translateZ(0) translateY(0) rotateX(0deg) rotateY(0deg);
+  }
+  10% {
+    transform: translateZ(0) translateY(-8px) rotateX(36deg) rotateY(72deg);
+  }
+  100% {
+    transform: translateZ(0) translateY(0) rotateX(360deg) rotateY(900deg);
+  }
+}
+
+.coin-spin-front {
+  animation: coin-spin-to-front 1.9s ease-in-out forwards;
+}
+
+.coin-spin-back {
+  animation: coin-spin-to-back 1.9s ease-in-out forwards;
+}
+
+/* 铜钱抛起 + 落下轻微弹跳（整行一起） */
+@keyframes coin-toss-bounce {
+  0% {
+    transform: translateY(0);
+  }
+  28% {
+    transform: translateY(-22px);
+  }
+  72% {
+    transform: translateY(4px);
+  }
+  85% {
+    transform: translateY(-1px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.coin-row-toss {
+  animation: coin-toss-bounce 1.9s ease-out forwards;
+}
+
+

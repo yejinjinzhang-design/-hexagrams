@@ -1,0 +1,29 @@
+{
+  "name": "ai-liuyao-divination",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@types/node": "^22.10.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "najia-core": "^1.0.3",
+    "next": "^15.5.12",
+    "postcss": "^8.4.47",
+    "react": "19.0.0-rc-f994737d14-20240522",
+    "react-dom": "19.0.0-rc-f994737d14-20240522",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.6.3"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.5.12",
+    "sharp": "^0.34.5"
+  }
+}
