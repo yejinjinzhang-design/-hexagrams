@@ -31,6 +31,12 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
+# Python 虚拟环境（与六爻项目无关的本地环境不要提交）
+.venv
+venv
+__pycache__
+*.pyc
+
 # misc
 *.pem
 .vercel
