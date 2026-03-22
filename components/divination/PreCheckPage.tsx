@@ -108,6 +108,9 @@ export function PreCheckPage({
         <p className="mt-2 text-[11px] leading-relaxed text-[#7a6751]">
           卦先照见当下，再言后势；若其应相合，方可细断其后
         </p>
+        <p className="mt-1 text-[10px] leading-relaxed tracking-wide text-[#9a8a78]">
+          先核前情，再断其后
+        </p>
 
         <div className="mt-4 min-h-[74px] space-y-2 rounded-md border border-[#E5D8C7]/70 bg-[#f7efe0] px-4 py-3 text-[11px] leading-relaxed text-[#5c4a38] md:px-5 md:py-4 whitespace-pre-wrap">
           {displayText}

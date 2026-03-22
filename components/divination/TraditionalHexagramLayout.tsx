@@ -151,101 +151,111 @@ export function TraditionalHexagramLayout({ board, user }: Props) {
         ) : null}
       </div>
 
-      {/* 手机端：单卡内上下对照 — 本卦名紧贴本卦爻，变卦名紧贴变卦爻 */}
+      {/* 手机端：同一主卡片内左右双列（本卦左、变卦右），窄屏仅卡片内横向微滚 */}
       <div className="min-w-0 md:hidden">
-        <div className="overflow-hidden rounded-xl border border-[#D9C4A8] bg-[#FAF4EA] px-2.5 pb-2.5 pt-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
-          {/* 本卦模块 */}
-          <div className="min-w-0">
-            <div className="text-center font-ritual-title">
-              <div className="text-[10px] tracking-[0.22em] text-[#8C7A6B]">
-                本卦
-              </div>
-              <div className="mt-0.5 break-keep text-[17px] font-semibold leading-tight text-[#3A2F26]">
-                {mainName || "未知卦"}
-              </div>
-            </div>
-            <div className="mt-2 flex min-w-0 flex-col gap-1.5 font-mono">
-              {linesTopDown.map((benLine) => {
-                const benBit = bitForIndex(benGua.binary, benLine.index);
-                const yinYangBen: "yin" | "yang" = benBit === "1" ? "yang" : "yin";
-                const isMoving = benLine.moving;
-                return (
-                  <div
-                    key={`m-ben-${benLine.index}`}
-                    className="grid min-w-0 grid-cols-[minmax(0,1.6rem)_minmax(0,1fr)_auto_auto_minmax(0,1.4rem)] items-center gap-x-1"
-                  >
-                    <div className="min-w-0 truncate text-center text-[9px] leading-tight text-[#7a6751]">
-                      {benLine.sixGod}
-                    </div>
-                    <div className="min-w-0 break-all text-right text-[10px] leading-tight text-[#4a3a2a]">
-                      {lineInfo(benLine)}
-                    </div>
-                    <div className="flex shrink-0 justify-center">
-                      <YaoShapeCompact yinYang={yinYangBen} />
-                    </div>
-                    <div className="flex w-4 shrink-0 justify-center">
-                      {isMoving ? <MovingDot compact /> : null}
-                    </div>
-                    <div className="flex shrink-0 justify-center">
-                      <ShiYingTag value={benLine.shiYing} compact />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {hasBian && bianGua ? (
-            <>
-              <div
-                className="my-2 border-t border-[#D9C4A8]/90"
-                aria-hidden
-              />
-              {/* 变卦模块 */}
-              <div className="min-w-0">
+        <div className="overflow-hidden rounded-xl border border-[#D9C4A8] bg-[#FAF4EA] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
+          <div className="touch-pan-x overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+            <div className="flex w-full min-w-[300px] flex-row flex-nowrap items-stretch px-1 pb-2 pt-2">
+              {/* 本卦列：标签 → 卦名 → 爻（纵向仅在本列内） */}
+              <div className="flex w-1/2 min-w-[142px] shrink-0 flex-col px-1">
                 <div className="text-center font-ritual-title">
-                  <div className="text-[10px] tracking-[0.22em] text-[#8C7A6B]">
-                    变卦
+                  <div className="text-[9px] tracking-[0.18em] text-[#8C7A6B]">
+                    本卦
                   </div>
-                  <div className="mt-0.5 break-keep text-[17px] font-semibold leading-tight text-[#5c4a38]">
-                    {changedName || "未知卦"}
+                  <div className="mt-0.5 break-keep text-[15px] font-semibold leading-tight text-[#3A2F26]">
+                    {mainName || "未知卦"}
                   </div>
                 </div>
-                <div className="mt-2 flex min-w-0 flex-col gap-1.5 font-mono">
+                <div className="mt-1.5 flex min-w-0 flex-col gap-1 font-mono">
                   {linesTopDown.map((benLine) => {
-                    const bianLine = bianLineByIndex.get(benLine.index) ?? null;
-                    const yinYangBian: "yin" | "yang" | null =
-                      bianLine && bianGua
-                        ? bitForIndex(bianGua.binary, bianLine.index) === "1"
-                          ? "yang"
-                          : "yin"
-                        : null;
+                    const benBit = bitForIndex(benGua.binary, benLine.index);
+                    const yinYangBen: "yin" | "yang" =
+                      benBit === "1" ? "yang" : "yin";
+                    const isMoving = benLine.moving;
                     return (
                       <div
-                        key={`m-bian-${benLine.index}`}
-                        className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2"
+                        key={`m-ben-${benLine.index}`}
+                        className="grid min-w-0 grid-cols-[minmax(0,1.35rem)_minmax(0,1fr)_auto_auto_minmax(0,1.15rem)] items-center gap-x-0.5"
                       >
-                        <div className="flex w-[38px] shrink-0 justify-center">
-                          {yinYangBian ? (
-                            <YaoShapeCompact yinYang={yinYangBian} />
-                          ) : (
-                            <div className="h-[5px] w-[34px] shrink-0 rounded-[2px] bg-[#d5c8b4]" />
-                          )}
+                        <div className="min-w-0 truncate text-center text-[8px] leading-tight text-[#7a6751]">
+                          {benLine.sixGod}
                         </div>
-                        <div className="min-w-0 break-all text-left text-[10px] leading-tight text-[#6b5235]">
-                          {bianLine ? lineInfo(bianLine) : ""}
+                        <div className="min-w-0 break-all text-right text-[9px] leading-tight text-[#4a3a2a]">
+                          {lineInfo(benLine)}
+                        </div>
+                        <div className="flex shrink-0 justify-center">
+                          <YaoShapeCompact yinYang={yinYangBen} />
+                        </div>
+                        <div className="flex w-3.5 shrink-0 justify-center">
+                          {isMoving ? <MovingDot compact /> : null}
+                        </div>
+                        <div className="flex shrink-0 justify-center">
+                          <ShiYingTag value={benLine.shiYing} compact />
                         </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
-            </>
-          ) : (
-            <p className="mt-2 border-t border-[#D9C4A8]/80 pt-2 text-center text-[10px] leading-relaxed text-[#8C7A6B]">
-              本卦无动爻，止于本卦
-            </p>
-          )}
+
+              <div
+                className="mx-0.5 w-px shrink-0 self-stretch bg-[#D9C4A8]/90"
+                aria-hidden
+              />
+
+              {/* 变卦列 */}
+              <div className="flex w-1/2 min-w-[142px] shrink-0 flex-col px-1">
+                {hasBian && bianGua ? (
+                  <>
+                    <div className="text-center font-ritual-title">
+                      <div className="text-[9px] tracking-[0.18em] text-[#8C7A6B]">
+                        变卦
+                      </div>
+                      <div className="mt-0.5 break-keep text-[15px] font-semibold leading-tight text-[#5c4a38]">
+                        {changedName || "未知卦"}
+                      </div>
+                    </div>
+                    <div className="mt-1.5 flex min-w-0 flex-col gap-1 font-mono">
+                      {linesTopDown.map((benLine) => {
+                        const bianLine =
+                          bianLineByIndex.get(benLine.index) ?? null;
+                        const yinYangBian: "yin" | "yang" | null =
+                          bianLine && bianGua
+                            ? bitForIndex(bianGua.binary, bianLine.index) ===
+                              "1"
+                              ? "yang"
+                              : "yin"
+                            : null;
+                        return (
+                          <div
+                            key={`m-bian-${benLine.index}`}
+                            className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-1"
+                          >
+                            <div className="flex w-[36px] shrink-0 justify-center">
+                              {yinYangBian ? (
+                                <YaoShapeCompact yinYang={yinYangBian} />
+                              ) : (
+                                <div className="h-[5px] w-[34px] shrink-0 rounded-[2px] bg-[#d5c8b4]" />
+                              )}
+                            </div>
+                            <div className="min-w-0 break-all text-left text-[9px] leading-tight text-[#6b5235]">
+                              {bianLine ? lineInfo(bianLine) : ""}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex min-h-[140px] flex-1 flex-col items-center justify-center px-0.5 text-center">
+                    <p className="text-[10px] leading-relaxed text-[#8C7A6B]">
+                      本卦无动爻，止于本卦
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
