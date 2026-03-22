@@ -40,3 +40,6 @@ __pycache__
 # misc
 *.pem
 .vercel
+
+# 匿名埋点事件日志（勿提交真实流量）
+data/analytics-events.jsonl

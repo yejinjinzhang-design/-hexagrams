@@ -6,6 +6,7 @@ import {
 } from "najia-core";
 import type { YaoType } from "najia-core";
 import type { DivinationResult } from "@/types/divination";
+import { getChangedHexagramName, getHexagramName } from "@/utils/hexagram";
 import type {
   LiuyaoBoard,
   HexagramBoard,
@@ -136,8 +137,29 @@ export function buildLiuyaoBoard(
   const yingPosition =
     benGuaLines.findIndex((l) => l.shiYing === "应") + 1 || 0;
 
+  const debugName = process.env.NODE_ENV !== "production";
+  if (debugName) {
+    console.log("==== BOARD NAME INPUT ====");
+    console.log("divination exists:", !!divination);
+    console.log("divination.originalHexagram.name:", divination?.originalHexagram?.name);
+    console.log("divination.changedHexagram.name:", divination?.changedHexagram?.name);
+  }
+
+  const computedBenName =
+    divination?.lines && divination.lines.length === 6
+      ? getHexagramName(divination.lines, debugName)
+      : "未知卦";
+  const computedBianName =
+    divination?.lines && divination.lines.length === 6
+      ? getChangedHexagramName(divination.lines, debugName)
+      : "未知卦";
+
   const benGua: HexagramBoard = {
-    name: divination?.originalHexagram.name ?? "待补充",
+    name:
+      divination?.originalHexagram.name &&
+      divination.originalHexagram.name !== "待补充"
+        ? divination.originalHexagram.name
+        : computedBenName,
     palace: BINARY_TO_PALACE[benBinary] ?? "—",
     binary: benBinary,
     typeTags: [],
@@ -164,7 +186,11 @@ export function buildLiuyaoBoard(
     const bShi = bianGuaLines.findIndex((l) => l.shiYing === "世") + 1 || 0;
     const bYing = bianGuaLines.findIndex((l) => l.shiYing === "应") + 1 || 0;
     bianGua = {
-      name: divination?.changedHexagram?.name ?? "待补充",
+      name:
+        divination?.changedHexagram?.name &&
+        divination.changedHexagram.name !== "待补充"
+          ? divination.changedHexagram.name
+          : computedBianName,
       palace: BINARY_TO_PALACE[bianBinary] ?? "—",
       binary: bianBinary,
       typeTags: [],

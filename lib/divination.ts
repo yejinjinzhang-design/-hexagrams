@@ -6,15 +6,17 @@ import type {
   LinePolarity
 } from "@/types/divination";
 import { getHexagramMetaByCode } from "@/lib/gua-data";
+import { getChangedHexagramName, getHexagramName } from "@/utils/hexagram";
 
 /**
- * 采用「三枚铜钱」起卦法：
- * 每枚铜钱：正面（乾隆通宝）记 3，反面记 2。
- * 三枚和为：
- * - 6 => 老阴（动阴，变阳）
- * - 7 => 少阳（静阳）
- * - 8 => 少阴（静阴）
- * - 9 => 老阳（动阳，变阴）
+ * 采用「三枚铜钱」起卦法（乾隆通宝）：
+ * - 正面 = 满文面，记 3
+ * - 反面 = 汉字面，记 2
+ * 三枚分数之和为：
+ * - 6 => 老阴（三反，阴爻动）
+ * - 7 => 少阳（两反一正，静阳）
+ * - 8 => 少阴（两正一反，静阴）
+ * - 9 => 老阳（三正，阳爻动）
  */
 export function mapCoinSumToLineKind(sum: number): LineKind {
   if (sum === 6) return "lao-yin";
@@ -82,7 +84,7 @@ export function buildHexagramFromLines(lines: LineInfo[]): Hexagram {
   return {
     lines: sorted,
     binaryCode,
-    name: meta?.name,
+    name: meta?.name ?? getHexagramName(sorted),
     description: meta?.description
   };
 }
@@ -105,7 +107,7 @@ export function buildChangedHexagramFromLines(lines: LineInfo[]): Hexagram {
   return {
     lines: changedLines,
     binaryCode,
-    name: meta?.name,
+    name: meta?.name ?? getChangedHexagramName(sorted),
     description: meta?.description
   };
 }

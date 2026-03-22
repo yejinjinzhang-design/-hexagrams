@@ -3,16 +3,28 @@ import { computeDivinationResult } from "@/lib/divination";
 import { buildLiuyaoBoard } from "@/lib/liuyao-board";
 import { analyzeDivination } from "@/lib/llm";
 import { saveSession, getSessionById, updateSession } from "@/lib/storage/mock";
+import type { PreAnalysisFeedbackBundle } from "@/lib/storage/types";
 import type { Gender, UserQuestionInput } from "@/types/divination";
+import type { DivinationMethod, CoinSide } from "@/lib/divination-methods";
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
       user: UserQuestionInput;
       diceSums: number[];
+      castTime?: string;
+      method?: DivinationMethod;
+      rawInput?: {
+        dateTime?: string;
+        calendar?: "lunar";
+        numberInput?: string;
+        manualCoins?: CoinSide[][];
+        // 兼容旧版本
+        numbers?: [number, number, number];
+      };
     };
 
-    const { user, diceSums } = body;
+    const { user, diceSums, castTime, method, rawInput } = body;
 
     if (!user || !Array.isArray(diceSums) || diceSums.length !== 6) {
       return NextResponse.json(
@@ -35,12 +47,15 @@ export async function POST(request: Request) {
 
     const userInput: UserQuestionInput = {
       birthYear: safeBirthYear,
-      gender: (user.gender ?? "male") as Gender,
+      gender: (user.gender ?? "other") as Gender,
       question: safeQuestion
     };
 
     const divination = computeDivinationResult(diceSums);
-    const date = new Date();
+    const date =
+      castTime && typeof castTime === "string" && castTime.trim()
+        ? new Date(castTime)
+        : new Date();
     const board = buildLiuyaoBoard(diceSums, date, divination);
 
     // 先创建仅包含卦象与排盘的会话，立即返回给前端
@@ -48,6 +63,8 @@ export async function POST(request: Request) {
       userInput,
       divination,
       board,
+      method,
+      rawInput,
       provider: undefined,
       model: undefined,
       promptVersion: undefined,
@@ -86,6 +103,35 @@ export async function POST(request: Request) {
           error instanceof Error
             ? error.message
             : "分析过程中发生未知错误。"
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = (await request.json()) as {
+      sessionId?: string;
+      preAnalysisFeedback?: PreAnalysisFeedbackBundle;
+    };
+    const { sessionId, preAnalysisFeedback } = body;
+    if (!sessionId || typeof sessionId !== "string") {
+      return NextResponse.json({ error: "缺少 sessionId" }, { status: 400 });
+    }
+    const current = await getSessionById(sessionId);
+    if (!current) {
+      return NextResponse.json({ error: "会话不存在" }, { status: 404 });
+    }
+    if (preAnalysisFeedback) {
+      await updateSession(sessionId, { preAnalysisFeedback });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json(
+      {
+        error:
+          e instanceof Error ? e.message : "更新会话时发生未知错误。"
       },
       { status: 500 }
     );

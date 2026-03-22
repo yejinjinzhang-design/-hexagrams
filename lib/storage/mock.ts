@@ -1,6 +1,12 @@
 import type { StoredDivinationSession } from "@/lib/storage/types";
 
-const sessions = new Map<string, StoredDivinationSession>();
+declare global {
+  // eslint-disable-next-line no-var
+  var __vibeLabSessions: Map<string, StoredDivinationSession> | undefined;
+}
+
+const sessions =
+  globalThis.__vibeLabSessions ?? (globalThis.__vibeLabSessions = new Map());
 
 function randomId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);

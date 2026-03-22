@@ -48,7 +48,16 @@ export function Dice({ disabled, onRollComplete }: DiceProps) {
     0
   );
 
-  const labels = results.map((s) => (s === "front" ? "正" : "背"));
+  const currentKindLabel =
+    currentSum === 6
+      ? "老阴（动）"
+      : currentSum === 7
+      ? "少阳"
+      : currentSum === 8
+      ? "少阴"
+      : currentSum === 9
+      ? "老阳（动）"
+      : "";
 
   return (
     <div className="flex flex-col items-center gap-4 rounded-2xl border border-[#e0d2b8] bg-[#faf5ea]/95 p-4 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
@@ -72,12 +81,10 @@ export function Dice({ disabled, onRollComplete }: DiceProps) {
 
       <div className="flex flex-col items-center gap-1 text-center text-xs text-[#5c4a38]">
         {hasThrownOnce && !spinning && (
-          <span>
-            本次：{labels.join(" / ")} → 和值 {currentSum}
-          </span>
+          <span>本次：{currentKindLabel || "阴阳未定"}</span>
         )}
         <span className="text-[10px] text-[#8a755a]">
-          6=老阴，7=少阳，8=少阴，9=老阳 · 三枚同抛，自下而上共六爻
+          三枚铜钱同抛一次为一爻，自下而上共六爻
         </span>
       </div>
 

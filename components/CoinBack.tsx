@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 乾隆通宝背面 - SVG 绘制
+ * 乾隆通宝满文面（正面）- SVG 绘制
  * 方孔 + 满文/装饰纹样，古铜色
  */
 export function CoinBack() {

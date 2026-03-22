@@ -57,6 +57,11 @@ DEEPSEEK_API_KEY=你的_deepseek_api_key
 
 > API Key 只会在服务端使用，不会暴露到前端。
 
+### 四点五、匿名埋点与 `/admin` 面板
+
+- 配置 `ADMIN_ANALYTICS_KEY`（见 `.env.example`），访问 **`/admin`** 查看今日概览、7/30 天趋势、起卦方式分布与转化漏斗。
+- 事件写入本地 **`data/analytics-events.jsonl`**（已加入 `.gitignore`）；生产 Serverless 需换持久化存储，详见 **`docs/analytics.md`**。
+
 ### 五、核心目录结构与说明
 
 - `app/page.tsx`：首页表单（出生年份 / 性别 / 问题），校验通过后跳转 `/divination`

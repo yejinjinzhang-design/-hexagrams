@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 乾隆通宝正面 - SVG 绘制
+ * 乾隆通宝汉字面（反面）- SVG 绘制
  * 上乾 右通 下隆 左宝，中方孔，古铜渐变
  */
 export function CoinFront() {

@@ -2,12 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg: #f3eee4;
+  --surface: #f8f3ea;
+  --border: #e5d8c7;
+  --text: #3e3127;
+  --muted: #8c7a6b;
+  --accent-gold: #b08a57;
+  --accent-teal: #5e6f68;
+  --accent-seal: #8e5a4f;
+  --accent-primary: #c6a46c;
+
+  --font-title: "Noto Serif SC", "Source Han Serif SC", "Songti SC",
+    "STSongti-SC", serif;
+  --font-body: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+}
+
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    ui-sans-serif, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
-    sans-serif;
+  font-family: var(--font-body);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* 纸感纹理 + 很轻的墨晕氛围层（不抢内容） */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image:
+    radial-gradient(circle at 12% 10%, rgba(176, 138, 87, 0.14), transparent 45%),
+    radial-gradient(circle at 88% 18%, rgba(94, 111, 104, 0.12), transparent 48%),
+    radial-gradient(circle at 50% 92%, rgba(142, 90, 79, 0.08), transparent 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 35%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(62, 49, 39, 0.025) 0px,
+      rgba(62, 49, 39, 0.025) 1px,
+      transparent 1px,
+      transparent 8px
+    );
+  opacity: 0.9;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image:
+    radial-gradient(circle at 2% 2%, rgba(176, 138, 87, 0.18), transparent 18%),
+    radial-gradient(circle at 98% 2%, rgba(176, 138, 87, 0.18), transparent 18%),
+    radial-gradient(circle at 2% 98%, rgba(94, 111, 104, 0.12), transparent 18%),
+    radial-gradient(circle at 98% 98%, rgba(94, 111, 104, 0.12), transparent 18%);
+  opacity: 0.35;
 }
 
 @keyframes soft-spin {
@@ -26,25 +79,57 @@ body {
 /* 铜钱 3D 翻面：1.8s 左右，translateZ(0) 防残影，无抖动 */
 @keyframes coin-spin-to-front {
   0% {
-    transform: translateZ(0) translateY(0) rotateX(0deg) rotateY(0deg);
+    transform: translateZ(0) translateY(0) translateX(0px) rotateX(0deg) rotateY(0deg)
+      rotateZ(0deg) scale(1);
+    filter: blur(0px);
   }
   10% {
-    transform: translateZ(0) translateY(-8px) rotateX(36deg) rotateY(72deg);
+    transform: translateZ(0) translateY(-12px) translateX(var(--tx1, 0px))
+      rotateX(36deg) rotateY(72deg) rotateZ(var(--rz1, 0deg)) scale(1.03);
+    filter: blur(0.25px);
+  }
+  60% {
+    transform: translateZ(0) translateY(-34px) translateX(var(--tx2, 0px))
+      rotateX(360deg) rotateY(720deg) rotateZ(var(--rz2, 0deg)) scale(1.06);
+    filter: blur(0.8px);
+  }
+  82% {
+    transform: translateZ(0) translateY(6px) translateX(var(--tx3, 0px))
+      rotateX(250deg) rotateY(660deg) rotateZ(var(--rz3, 0deg)) scale(0.99);
+    filter: blur(0.2px);
   }
   100% {
-    transform: translateZ(0) translateY(0) rotateX(360deg) rotateY(720deg);
+    transform: translateZ(0) translateY(0) translateX(0px) rotateX(360deg)
+      rotateY(720deg) rotateZ(0deg) scale(1);
+    filter: blur(0px);
   }
 }
 
 @keyframes coin-spin-to-back {
   0% {
-    transform: translateZ(0) translateY(0) rotateX(0deg) rotateY(0deg);
+    transform: translateZ(0) translateY(0) translateX(0px) rotateX(0deg) rotateY(0deg)
+      rotateZ(0deg) scale(1);
+    filter: blur(0px);
   }
   10% {
-    transform: translateZ(0) translateY(-8px) rotateX(36deg) rotateY(72deg);
+    transform: translateZ(0) translateY(-12px) translateX(var(--tx1, 0px))
+      rotateX(36deg) rotateY(72deg) rotateZ(var(--rz1, 0deg)) scale(1.03);
+    filter: blur(0.25px);
+  }
+  60% {
+    transform: translateZ(0) translateY(-34px) translateX(var(--tx2, 0px))
+      rotateX(360deg) rotateY(900deg) rotateZ(var(--rz2, 0deg)) scale(1.06);
+    filter: blur(0.8px);
+  }
+  82% {
+    transform: translateZ(0) translateY(6px) translateX(var(--tx3, 0px))
+      rotateX(250deg) rotateY(820deg) rotateZ(var(--rz3, 0deg)) scale(0.99);
+    filter: blur(0.2px);
   }
   100% {
-    transform: translateZ(0) translateY(0) rotateX(360deg) rotateY(900deg);
+    transform: translateZ(0) translateY(0) translateX(0px) rotateX(360deg)
+      rotateY(900deg) rotateZ(0deg) scale(1);
+    filter: blur(0px);
   }
 }
 
@@ -54,6 +139,108 @@ body {
 
 .coin-spin-back {
   animation: coin-spin-to-back 1.9s ease-in-out forwards;
+}
+
+/* 通用投掷动效：不根据正背切换 keyframes，避免中途翻面闪跳 */
+.coin-spin-throw {
+  animation: coin-spin-to-front 1.9s ease-in-out infinite;
+}
+
+/* 起卦前的“轻微持续转动”：循环、克制，不中途停住 */
+.coin-spin-idle {
+  animation: coin-idle-rotate 2.6s ease-in-out infinite;
+}
+
+@keyframes coin-idle-rotate {
+  0% {
+    transform: translateZ(0) translateY(0px) rotateX(0deg)
+      rotateY(calc(var(--idleBaseRotY, 0deg) - 10deg)) rotateZ(0deg)
+      scale(1);
+    filter: blur(0px);
+  }
+  45% {
+    transform: translateZ(0) translateY(-3px) rotateX(10deg)
+      rotateY(calc(var(--idleBaseRotY, 0deg) + 12deg)) rotateZ(0deg)
+      scale(1.02);
+    filter: blur(0.18px);
+  }
+  100% {
+    transform: translateZ(0) translateY(0px) rotateX(0deg)
+      rotateY(calc(var(--idleBaseRotY, 0deg) - 10deg)) rotateZ(0deg)
+      scale(1);
+    filter: blur(0px);
+  }
+}
+
+/* 静置轻呼吸（每枚铜钱有不同延迟，保持错落感） */
+.coin-place {
+  transform: translateY(var(--baseTy, 0px)) rotate(var(--baseRot, 0deg));
+  transform-origin: 50% 60%;
+}
+
+.coin-breathe {
+  animation: coin-breathe 2.8s ease-in-out infinite;
+}
+
+@keyframes coin-breathe {
+  0% {
+    transform: translateY(var(--baseTy, 0px)) rotate(var(--baseRot, 0deg));
+  }
+  50% {
+    transform: translateY(calc(var(--baseTy, 0px) - 2px))
+      rotate(calc(var(--baseRot, 0deg) + 0.4deg));
+  }
+  100% {
+    transform: translateY(var(--baseTy, 0px)) rotate(var(--baseRot, 0deg));
+  }
+}
+
+/* 地面阴影：对应“腾空-空中-落下”的空间感 */
+.coin-ground-shadow {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 66%;
+  height: 16px;
+  transform: translateX(-50%) scale(1);
+  transform-origin: center;
+  border-radius: 999px;
+  background: rgba(62, 49, 39, 0.22);
+  filter: blur(2px);
+  opacity: 0.32;
+  pointer-events: none;
+}
+
+.coin-shadow-toss {
+  animation: coin-shadow-toss 1.9s ease-out infinite;
+}
+
+@keyframes coin-shadow-toss {
+  0% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.32;
+    filter: blur(2px);
+  }
+  20% {
+    transform: translateX(-50%) scale(1.25);
+    opacity: 0.22;
+    filter: blur(4px);
+  }
+  60% {
+    transform: translateX(-50%) scale(1.55);
+    opacity: 0.14;
+    filter: blur(7px);
+  }
+  85% {
+    transform: translateX(-50%) scale(0.98);
+    opacity: 0.26;
+    filter: blur(2px);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.28;
+    filter: blur(1.8px);
+  }
 }
 
 /* 铜钱抛起 + 落下轻微弹跳（整行一起） */
@@ -75,8 +262,127 @@ body {
   }
 }
 
+/* 用户“停止落卦”后的收势落下：只收敛，不再翻面 */
+.coin-settle {
+  animation: coin-settle-to-final var(--settleDurS, 0.7s) ease-out forwards;
+}
+
+@keyframes coin-settle-to-final {
+  0% {
+    transform: translateY(var(--settleFromY, -80px))
+      translateX(var(--settleFromX, 0px))
+      rotateZ(var(--finalRotZ, 0deg))
+      scale(1.02);
+    filter: blur(0.25px);
+  }
+  60% {
+    transform: translateY(calc(var(--settleYFinal, 0px) - 18px))
+      translateX(var(--settleXFinal, 0px))
+      rotateZ(calc(var(--finalRotZ, 0deg) + 1deg))
+      scale(1.01);
+    filter: blur(0.1px);
+  }
+  78% {
+    transform: translateY(calc(var(--settleYFinal, 0px) - 6px))
+      translateX(calc(var(--settleXFinal, 0px) + 2px))
+      rotateZ(calc(var(--finalRotZ, 0deg) + 0.4deg))
+      scale(0.995);
+    filter: blur(0.05px);
+  }
+  100% {
+    transform: translateY(var(--settleYFinal, 0px))
+      translateX(var(--settleXFinal, 0px))
+      rotateZ(var(--finalRotZ, 0deg))
+      scale(1);
+    filter: blur(0px);
+  }
+}
+
+/* 收势阴影：对应落下与收紧 */
+.coin-shadow-settle {
+  animation: coin-shadow-settle var(--settleDurS, 0.7s) ease-out forwards;
+}
+
+@keyframes coin-shadow-settle {
+  0% {
+    transform: translateX(-50%) scale(1.18);
+    opacity: 0.22;
+    filter: blur(5px);
+  }
+  70% {
+    transform: translateX(-50%) scale(0.92);
+    opacity: 0.28;
+    filter: blur(2.4px);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.30;
+    filter: blur(1.6px);
+  }
+}
+
 .coin-row-toss {
   animation: coin-toss-bounce 1.9s ease-out forwards;
+}
+
+.action-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 48px;
+  margin-bottom: 64px;
+  gap: 12px;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.primary-button {
+  width: 100%;
+  height: 48px;
+  border-radius: 999px;
+  background: #c89b5a;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.primary-button:hover {
+  background: #b88a4a;
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.secondary-button {
+  width: 100%;
+  height: 44px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid #c89b5a;
+  color: #8b6b3f;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.secondary-button:hover {
+  background: rgba(200, 155, 90, 0.08);
+}
+
+/* 统一的古典标题字体 */
+.font-ritual-title {
+  font-family: var(--font-title);
+}
+
+/* 统一的“卷轴/纸面卡片”表面质感（可选复用） */
+.ritual-card {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(62, 49, 39, 0.03);
 }
 
 

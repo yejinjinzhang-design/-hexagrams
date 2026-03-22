@@ -16,8 +16,15 @@ export const COIN_CONFIG = {
   durationsMs: [1800, 1850, 1900] as [number, number, number],
 } as const;
 
-/** 使用脚本生成的最终 UI 素材，不再使用旧素材 */
+/**
+ * 乾隆通宝朝向约定（与爻值一致）：
+ * - `front` = 满文面 = 铜钱「正面」= 记 3 分（三枚皆此为老阳）
+ * - `back` = 汉字面 = 铜钱「反面」= 记 2 分（三枚皆此为老阴）
+ *
+ * 资源文件名沿用历史命名（coin_front / coin_back），此前曾把汉字图误绑到 front；
+ * 此处对调绑定，使逻辑上的 front/back 与真实满文/汉字面一致。
+ */
 export const COIN_IMAGES = {
-  front: "/coins/coin_front.png",
-  back: "/coins/coin_back.png",
+  front: "/coins/coin_back.png",
+  back: "/coins/coin_front.png",
 } as const;

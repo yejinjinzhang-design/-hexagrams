@@ -50,7 +50,7 @@ export function Coin({
           })
         }}
       >
-        {/* 正面：无黑底，照片放大居中只留铜钱 */}
+        {/* 朝上一面：满文面（铜钱正面） */}
         <div
           className="absolute inset-0 flex items-center justify-center rounded-full overflow-hidden bg-[#e8dcc8]"
           style={{
@@ -62,8 +62,8 @@ export function Coin({
           <div className="relative h-full w-full rounded-full overflow-hidden">
             {USE_PHOTO ? (
               <Image
-                src="/coins/qianlong-front.png"
-                alt="乾隆通宝正面"
+                src="/coins/qianlong-back.png"
+                alt="乾隆通宝满文面（正面）"
                 fill
                 sizes="72px"
                 className="object-cover rounded-full"
@@ -74,11 +74,11 @@ export function Coin({
                 }}
               />
             ) : (
-              <CoinFront />
+              <CoinBack />
             )}
           </div>
         </div>
-        {/* 背面：同上 */}
+        {/* 朝下另一面：汉字面（反面） */}
         <div
           className="absolute inset-0 flex items-center justify-center rounded-full overflow-hidden bg-[#e8dcc8]"
           style={{
@@ -93,8 +93,8 @@ export function Coin({
           <div className="relative h-full w-full rounded-full overflow-hidden">
             {USE_PHOTO ? (
               <Image
-                src="/coins/qianlong-back.png"
-                alt="乾隆通宝背面"
+                src="/coins/qianlong-front.png"
+                alt="乾隆通宝汉字面（反面）"
                 fill
                 sizes="72px"
                 className="object-cover rounded-full"
@@ -105,7 +105,7 @@ export function Coin({
                 }}
               />
             ) : (
-              <CoinBack />
+              <CoinFront />
             )}
           </div>
         </div>
