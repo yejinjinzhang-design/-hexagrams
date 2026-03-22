@@ -6,6 +6,8 @@ import { saveSession, getSessionById, updateSession } from "@/lib/storage/mock";
 import type { PreAnalysisFeedbackBundle } from "@/lib/storage/types";
 import type { Gender, UserQuestionInput } from "@/types/divination";
 import type { DivinationMethod, CoinSide } from "@/lib/divination-methods";
+import type { CastTimeContext } from "@/lib/time/cast-timezone";
+import { buildCastTimeContextFromMs } from "@/lib/time/cast-timezone";
 
 export const runtime = "nodejs";
 
@@ -15,6 +17,7 @@ export async function POST(request: Request) {
       user: UserQuestionInput;
       diceSums: number[];
       castTime?: string;
+      castTimeContext?: CastTimeContext;
       method?: DivinationMethod;
       rawInput?: {
         dateTime?: string;
@@ -26,7 +29,7 @@ export async function POST(request: Request) {
       };
     };
 
-    const { user, diceSums, castTime, method, rawInput } = body;
+    const { user, diceSums, castTime, castTimeContext, method, rawInput } = body;
 
     if (!user || !Array.isArray(diceSums) || diceSums.length !== 6) {
       return NextResponse.json(
@@ -54,10 +57,40 @@ export async function POST(request: Request) {
     };
 
     const divination = computeDivinationResult(diceSums);
-    const date =
-      castTime && typeof castTime === "string" && castTime.trim()
-        ? new Date(castTime)
-        : new Date();
+
+    if (!castTime || typeof castTime !== "string" || !castTime.trim()) {
+      return NextResponse.json(
+        { error: "缺少起卦时间 castTime（须为前端传入的 ISO-8601 瞬时点）。" },
+        { status: 400 }
+      );
+    }
+    const date = new Date(castTime.trim());
+    if (!Number.isFinite(date.getTime())) {
+      return NextResponse.json(
+        { error: "起卦时间 castTime 无法解析为有效日期。" },
+        { status: 400 }
+      );
+    }
+
+    let resolvedCastContext: CastTimeContext | undefined;
+    if (
+      castTimeContext &&
+      typeof castTimeContext.timestampMs === "number" &&
+      Number.isFinite(castTimeContext.timestampMs) &&
+      typeof castTimeContext.timestampIso === "string"
+    ) {
+      resolvedCastContext = {
+        ...castTimeContext,
+        timestampIso: new Date(castTimeContext.timestampMs).toISOString(),
+      };
+    } else {
+      try {
+        resolvedCastContext = buildCastTimeContextFromMs(date.getTime());
+      } catch {
+        resolvedCastContext = undefined;
+      }
+    }
+
     const board = buildLiuyaoBoard(diceSums, date, divination);
 
     // 先创建仅包含卦象与排盘的会话，立即返回给前端
@@ -66,6 +99,7 @@ export async function POST(request: Request) {
       divination,
       board,
       method,
+      castTimeContext: resolvedCastContext,
       rawInput,
       provider: undefined,
       model: undefined,

@@ -1,5 +1,9 @@
 import { computeDivinationResult } from "@/lib/divination";
 import type { LineKind, LinePolarity } from "@/types/divination";
+import {
+  CAST_TIMEZONE_IANA,
+  getZonedWallClockParts,
+} from "@/lib/time/cast-timezone";
 
 export type DivinationMethod =
   | "coin"
@@ -339,21 +343,23 @@ export function deriveHexagramFromNumbersInput(numberInput: string): DivinationU
  * 公历时刻仅用于换算农历与八字时辰，无「附加数」项。
  */
 export function deriveHexagramFromDate(dateTimeISO: string): DivinationUnifiedResult {
-  const timestamp = new Date().toISOString();
   const d = new Date(dateTimeISO);
   if (!Number.isFinite(d.getTime())) {
     throw new Error("Invalid dateTimeISO");
   }
+  // 与排盘一致：用「瞬时点」在 Asia/Shanghai 的墙钟分量换算农历，避免服务端 UTC 下 getHours 等错位
+  const timestamp = d.toISOString();
+  const wall = getZonedWallClockParts(d, CAST_TIMEZONE_IANA);
 
   const { Solar } = require("lunar-javascript");
   // 由公历时刻转农历，再按农历规则取卦；时支仍由八字时辰推得
   const solar = Solar.fromYmdHms(
-    d.getFullYear(),
-    d.getMonth() + 1,
-    d.getDate(),
-    d.getHours(),
-    d.getMinutes(),
-    d.getSeconds()
+    wall.year,
+    wall.month,
+    wall.day,
+    wall.hour,
+    wall.minute,
+    wall.second
   );
   const lunar = solar.getLunar();
 

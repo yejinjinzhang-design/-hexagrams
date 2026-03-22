@@ -15,6 +15,12 @@ import {
 } from "@/lib/divination-methods";
 import type { Gender, LineKind } from "@/types/divination";
 import type { CoinSide } from "@/components/divination-coins";
+import {
+  buildCastTimeContextFromMs,
+  formatInstantInTimeZoneZh,
+  parseDatetimeLocalAsShanghaiInstant,
+  shanghaiNowDatetimeLocalValue,
+} from "@/lib/time/cast-timezone";
 
 /** ?coinTest=0|1|2|3 固定四组对比：全正/全反/正反正/反正反 */
 const COIN_TEST_COMBOS: [CoinSide, CoinSide, CoinSide][] = [
@@ -65,23 +71,10 @@ export default function DivinationPageClient() {
   const [method, setMethod] = useState<DivinationMethod>("coin");
   const [castTimeISO, setCastTimeISO] = useState<string>(() => new Date().toISOString());
 
-  // 日期卦
-  const nowLocalForInput = useMemo(() => {
-    try {
-      const d = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const yyyy = d.getFullYear();
-      const mm = pad(d.getMonth() + 1);
-      const dd = pad(d.getDate());
-      const hh = pad(d.getHours());
-      const mi = pad(d.getMinutes());
-      return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-    } catch {
-      return "";
-    }
-  }, []);
-
-  const [dateTimeLocal, setDateTimeLocal] = useState<string>(nowLocalForInput);
+  // 日期卦：`datetime-local` 按北京时间（Asia/Shanghai）解释，与排盘一致
+  const [dateTimeLocal, setDateTimeLocal] = useState<string>(() =>
+    shanghaiNowDatetimeLocalValue()
+  );
 
   // 数字卦（梅花易数数字起卦：支持连续数字串或带 '.' 分隔两组）
   const [numberInput, setNumberInput] = useState<string>("");
@@ -101,13 +94,13 @@ export default function DivinationPageClient() {
     setDiceSums([]);
     setError(null);
     setCastTimeISO(new Date().toISOString());
-    setDateTimeLocal(nowLocalForInput);
+    setDateTimeLocal(shanghaiNowDatetimeLocalValue());
     setNumberInput("");
     setManualCoins(
       Array.from({ length: 6 }, () => Array.from({ length: 3 }, () => null))
     );
     prevDiceLenRef.current = 0;
-  }, [method, nowLocalForInput]);
+  }, [method]);
 
   useEffect(() => {
     if (divinationStartedRef.current) return;
@@ -155,7 +148,7 @@ export default function DivinationPageClient() {
     setError(null);
     setManualCoins(Array.from({ length: 6 }, () => Array.from({ length: 3 }, () => null)));
     setNumberInput("");
-    setDateTimeLocal(nowLocalForInput);
+    setDateTimeLocal(shanghaiNowDatetimeLocalValue());
     setCastTimeISO(new Date().toISOString());
   };
 
@@ -164,23 +157,10 @@ export default function DivinationPageClient() {
   const previewResult =
     diceSums.length === 6 ? computeDivinationResult(diceSums) : null;
 
-  const castTimeText = useMemo(() => {
-    try {
-      const d = new Date(castTimeISO);
-      const fmt = new Intl.DateTimeFormat("zh-CN", {
-        timeZone: "Asia/Shanghai",
-        year: "numeric",
-        month: "numeric",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      });
-      return fmt.format(d);
-    } catch {
-      return "";
-    }
-  }, [castTimeISO]);
+  const castTimeText = useMemo(
+    () => formatInstantInTimeZoneZh(castTimeISO),
+    [castTimeISO]
+  );
 
   const birthYearText =
     typeof userInput.birthYear === "number" ? `${userInput.birthYear}年` : "未填写";
@@ -197,9 +177,18 @@ export default function DivinationPageClient() {
     setError(null);
 
     try {
+      const timestampMs =
+        method === "lunarDate"
+          ? new Date(castTimeISO).getTime()
+          : Date.now();
+      if (!Number.isFinite(timestampMs)) {
+        throw new Error("起卦时间无效，请重新选择或起卦。");
+      }
+      const castCtx = buildCastTimeContextFromMs(timestampMs);
+
       const rawInput =
         method === "lunarDate"
-          ? { dateTime: castTimeISO, calendar: "lunar" as const }
+          ? { dateTime: castCtx.timestampIso, calendar: "lunar" as const }
           : method === "number"
             ? { numberInput }
             : method === "manual"
@@ -212,7 +201,8 @@ export default function DivinationPageClient() {
         body: JSON.stringify({
           user: userInput,
           diceSums,
-          castTime: castTimeISO,
+          castTime: castCtx.timestampIso,
+          castTimeContext: castCtx,
           method,
           rawInput,
         })
@@ -340,7 +330,7 @@ export default function DivinationPageClient() {
 
               <div className="mt-4 flex flex-col gap-3">
                 <label className="text-[12px] text-[#8C7A6B]">
-                  起卦时间（日期与时刻）
+                  起卦时间（北京时间，日期与时刻）
                   <input
                     type="datetime-local"
                     value={dateTimeLocal}
@@ -353,7 +343,7 @@ export default function DivinationPageClient() {
                   <button
                     type="button"
                     onClick={() => {
-                      setDateTimeLocal(nowLocalForInput);
+                      setDateTimeLocal(shanghaiNowDatetimeLocalValue());
                       setCastTimeISO(new Date().toISOString());
                     }}
                     className="w-full rounded-[999px] border border-[#C89B5A] bg-transparent px-5 py-2 text-sm text-[#8B6B3F] hover:bg-[rgba(200,155,90,0.08)] transition-colors"
@@ -366,9 +356,10 @@ export default function DivinationPageClient() {
                     onClick={() => {
                       try {
                         if (!dateTimeLocal) return;
-                        const d = new Date(dateTimeLocal);
-                        if (Number.isNaN(d.getTime())) return;
-                        const iso = d.toISOString();
+                        const instant = parseDatetimeLocalAsShanghaiInstant(
+                          dateTimeLocal
+                        );
+                        const iso = instant.toISOString();
                         setCastTimeISO(iso);
                         const r = deriveHexagramFromDate(iso);
                         setDiceSums(r.diceSums);

@@ -3,6 +3,7 @@ import type { UserQuestionInput } from "@/types/divination";
 import type { DivinationResult } from "@/types/divination";
 import type { LiuyaoBoard } from "@/types/liuyao-board";
 import type { DivinationMethod, CoinSide } from "@/lib/divination-methods";
+import type { CastTimeContext } from "@/lib/time/cast-timezone";
 
 /** 前事验证后、后续分析前的补述消息（存于会话，供后续 DeepSeek 注入） */
 export type PreAnalysisFeedbackMessage = {
@@ -24,6 +25,11 @@ export interface StoredDivinationSession {
   divination: DivinationResult;
   /** 起卦方式（铜钱/日期/数字/手动） */
   method?: DivinationMethod;
+  /**
+   * 起卦瞬时点与元数据（由前端生成，服务端只存照；排盘与展示均基于 timestampIso / timestampMs）
+   */
+  castTimeContext?: CastTimeContext;
+
   /** 起卦输入（用于前事/分析/追问的上下文复用） */
   rawInput?: {
     dateTime?: string;

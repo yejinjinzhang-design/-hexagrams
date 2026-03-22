@@ -1,10 +1,15 @@
 import {
   getNaJiaData,
   getTransformedHexagram,
-  getAstrologyData,
   analyzeGlobalIndicators,
+  calculateLifeStages,
 } from "najia-core";
-import type { YaoType } from "najia-core";
+import type { AstrologyData, YaoType } from "najia-core";
+import { Solar } from "lunar-javascript";
+import {
+  CAST_TIMEZONE_IANA,
+  getZonedWallClockParts,
+} from "@/lib/time/cast-timezone";
 import type { DivinationResult } from "@/types/divination";
 import { getChangedHexagramName, getHexagramName } from "@/utils/hexagram";
 import type {
@@ -63,7 +68,53 @@ function hexagramToBinary(lines: YaoType[]): string {
   return topToBottom;
 }
 
-function buildMeta(astro: ReturnType<typeof getAstrologyData>): LiuyaoBoardMeta {
+/**
+ * lunar-javascript 的 Solar.fromDate / najia 的 getAstrologyData 使用 Date 的「运行环境本地」分量；
+ * 在 Vercel（常见为 UTC）会得到错误四柱。此处统一用 Asia/Shanghai 墙钟 + Solar.fromYmdHms。
+ */
+function getAstrologyDataForShanghaiInstant(instant: Date): AstrologyData {
+  const p = getZonedWallClockParts(instant, CAST_TIMEZONE_IANA);
+  const solar = Solar.fromYmdHms(
+    p.year,
+    p.month,
+    p.day,
+    p.hour,
+    p.minute,
+    p.second
+  );
+  const lunar = solar.getLunar();
+  const dayStem = lunar.getDayGan();
+  const lifeStages = calculateLifeStages(dayStem);
+  return {
+    solarDate: `${solar.getYear()}年${solar.getMonth()}月${solar.getDay()}日${solar.getHour()}时${solar.getMinute()}分`,
+    lunarDate: lunar.toString(),
+    yearPillar: lunar.getYearInGanZhi() + "年",
+    monthPillar: lunar.getMonthInGanZhi() + "月",
+    dayPillar: lunar.getDayInGanZhi() + "日",
+    hourPillar: lunar.getTimeInGanZhi() + "时",
+    dayXunKong: lunar.getDayXunKong(),
+    hourXunKong: lunar.getTimeXunKong(),
+    monthJian: lunar.getMonthInGanZhi(),
+    lifeStages,
+  };
+}
+
+function getDayStemForShanghaiInstant(instant: Date): string {
+  const p = getZonedWallClockParts(instant, CAST_TIMEZONE_IANA);
+  const solar = Solar.fromYmdHms(
+    p.year,
+    p.month,
+    p.day,
+    p.hour,
+    p.minute,
+    p.second
+  );
+  const lunar = solar.getLunar();
+  const dayGanZhi = lunar.getDayInGanZhi();
+  return dayGanZhi.substring(0, 1);
+}
+
+function buildMeta(astro: AstrologyData): LiuyaoBoardMeta {
   return {
     solarDate: astro.solarDate,
     lunarDate: astro.lunarDate,
@@ -95,8 +146,9 @@ export function buildLiuyaoBoard(
   divination?: DivinationResult
 ): LiuyaoBoard {
   const hexagram = diceSumsToHexagram(diceSums);
-  const astro = getAstrologyData(date);
-  const naJiaLines = getNaJiaData(hexagram, date);
+  const astro = getAstrologyDataForShanghaiInstant(date);
+  const dayStem = getDayStemForShanghaiInstant(date);
+  const naJiaLines = getNaJiaData(hexagram, date, dayStem);
   const transformed = getTransformedHexagram(hexagram);
 
   const movingPositions = hexagram.lines
@@ -170,7 +222,7 @@ export function buildLiuyaoBoard(
 
   let bianGua: HexagramBoard | null = null;
   if (movingPositions.length > 0 && bianBinary) {
-    const bianNaJia = getNaJiaData(transformed, date);
+    const bianNaJia = getNaJiaData(transformed, date, dayStem);
     const bianGuaLines: YaoLineBoard[] = bianNaJia.map((line, i) => ({
       index: i + 1,
       naJia: line.stem + line.branch,

@@ -8,6 +8,7 @@ node_modules
 out
 build
 dist
+*.tsbuildinfo
 
 # env (不要提交密钥)
 .env
