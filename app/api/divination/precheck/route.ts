@@ -3,6 +3,8 @@ import { getSessionById, updateSession } from "@/lib/storage/mock";
 import { sanitizeAiText } from "@/utils/sanitizeAiText";
 import type { YaoLineBoard } from "@/types/liuyao-board";
 
+export const runtime = "nodejs";
+
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
 function getApiKey(): string {
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
 
     if (!sessionId) {
       return NextResponse.json(
-        { text: "DEBUG: sessionId missing" },
+        { text: "未能识别本次占卦会话，请返回重新起卦。" },
         { status: 400 }
       );
     }
@@ -32,7 +34,10 @@ export async function POST(request: Request) {
     if (!session || !session.board) {
       console.error("Session not found for sessionId:", sessionId);
       return NextResponse.json(
-        { text: "DEBUG: session not found" },
+        {
+          text:
+            "本次卦象会话已失效或不在当前服务器上，请重新起卦后再试。",
+        },
         { status: 404 }
       );
     }
@@ -219,7 +224,7 @@ ${benLines}
           raw
         );
         return NextResponse.json({
-          text: "DEBUG: deepseek http error",
+          text: "前事验证服务暂时不可用，请稍后重试。",
         });
       }
 
@@ -229,7 +234,7 @@ ${benLines}
       } catch (e) {
         console.error("[precheck] Failed to parse DeepSeek JSON:", e);
         return NextResponse.json({
-          text: "DEBUG: deepseek json parse failed",
+          text: "前事验证返回异常，请稍后重试。",
         });
       }
 
@@ -245,7 +250,7 @@ ${benLines}
       ) {
         console.error("DeepSeek response invalid:", parsed);
         return NextResponse.json({
-          text: "DEBUG: deepseek content missing",
+          text: "前事验证未返回有效内容，请稍后重试。",
         });
       }
 
@@ -260,7 +265,7 @@ ${benLines}
     if (!text) {
       console.error("[precheck] empty text from DeepSeek");
       return NextResponse.json({
-        text: "DEBUG: deepseek content missing",
+        text: "前事验证未返回有效内容，请稍后重试。",
       });
     }
 
@@ -270,7 +275,7 @@ ${benLines}
   } catch (error) {
     console.error("[precheck] handler error:", error);
     return NextResponse.json(
-      { text: "DEBUG: handler error" },
+      { text: "前事验证处理出错，请稍后重试。" },
       { status: 500 }
     );
   }

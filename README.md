@@ -62,6 +62,11 @@ DEEPSEEK_API_KEY=你的_deepseek_api_key
 - 配置 `ADMIN_ANALYTICS_KEY`（见 `.env.example`），访问 **`/admin`** 查看今日概览、7/30 天趋势、起卦方式分布与转化漏斗。
 - 事件写入本地 **`data/analytics-events.jsonl`**（已加入 `.gitignore`）；生产 Serverless 需换持久化存储，详见 **`docs/analytics.md`**。
 
+### 四点六、占卦会话（追问 / 前验）
+
+- **默认**：内存 + **本地文件** `data/sessions/*.json`（未配 Redis 时）；Vercel 未配 Redis 时还会写 `/tmp`（**多实例仍不可靠**）。
+- **推荐（Vercel 线上）**：配置 **Upstash Redis** 环境变量 `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`（见 `.env.example`），会话会写入 Redis（7 天 TTL），多实例、冷启动均可追问。详细步骤：**`docs/vercel-redis-sessions.md`**。
+
 ### 五、核心目录结构与说明
 
 - `app/page.tsx`：首页表单（出生年份 / 性别 / 问题），校验通过后跳转 `/divination`

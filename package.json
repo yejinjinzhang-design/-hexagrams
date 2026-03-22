@@ -12,6 +12,7 @@
     "@types/node": "^22.10.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@upstash/redis": "^1.37.0",
     "autoprefixer": "^10.4.20",
     "lunar-javascript": "^1.7.7",
     "najia-core": "^1.0.3",

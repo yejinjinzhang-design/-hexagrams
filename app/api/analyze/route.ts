@@ -7,6 +7,8 @@ import type { PreAnalysisFeedbackBundle } from "@/lib/storage/types";
 import type { Gender, UserQuestionInput } from "@/types/divination";
 import type { DivinationMethod, CoinSide } from "@/lib/divination-methods";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {

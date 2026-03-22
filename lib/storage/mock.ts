@@ -1,4 +1,11 @@
+import { mkdir, readFile, writeFile } from "fs/promises";
+import path from "path";
 import type { StoredDivinationSession } from "@/lib/storage/types";
+import {
+  isRedisSessionStoreEnabled,
+  redisReadSession,
+  redisWriteSession,
+} from "@/lib/storage/redis-session";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -7,6 +14,39 @@ declare global {
 
 const sessions =
   globalThis.__vibeLabSessions ?? (globalThis.__vibeLabSessions = new Map());
+
+/** 未配置 Redis 时：Vercel 用 /tmp，本地用 data/sessions */
+function getSessionsDir(): string {
+  if (process.env.VERCEL) {
+    return path.join("/tmp", "vibe-lab-sessions");
+  }
+  return path.join(process.cwd(), "data", "sessions");
+}
+
+async function writeSessionToDisk(session: StoredDivinationSession): Promise<void> {
+  if (isRedisSessionStoreEnabled()) return;
+  try {
+    const dir = getSessionsDir();
+    await mkdir(dir, { recursive: true });
+    const file = path.join(dir, `${session.id}.json`);
+    await writeFile(file, JSON.stringify(session), "utf8");
+  } catch (e) {
+    console.error("[storage] writeSessionToDisk failed:", e);
+  }
+}
+
+async function readSessionFromDisk(
+  id: string
+): Promise<StoredDivinationSession | null> {
+  if (isRedisSessionStoreEnabled()) return null;
+  try {
+    const file = path.join(getSessionsDir(), `${id}.json`);
+    const raw = await readFile(file, "utf8");
+    return JSON.parse(raw) as StoredDivinationSession;
+  } catch {
+    return null;
+  }
+}
 
 function randomId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -20,9 +60,11 @@ export async function saveSession(
   const session: StoredDivinationSession = {
     ...data,
     id,
-    createdAt
+    createdAt,
   };
   sessions.set(id, session);
+  await redisWriteSession(session);
+  await writeSessionToDisk(session);
   return session;
 }
 
@@ -30,19 +72,37 @@ export async function updateSession(
   id: string,
   patch: Partial<StoredDivinationSession>
 ): Promise<StoredDivinationSession | null> {
-  const current = sessions.get(id);
+  const current = await getSessionById(id);
   if (!current) return null;
   const next: StoredDivinationSession = {
     ...current,
-    ...patch
+    ...patch,
   };
   sessions.set(id, next);
+  await redisWriteSession(next);
+  await writeSessionToDisk(next);
   return next;
 }
 
 export async function getSessionById(
   id: string
 ): Promise<StoredDivinationSession | null> {
-  return sessions.get(id) ?? null;
-}
+  const cached = sessions.get(id);
+  if (cached) return cached;
 
+  if (isRedisSessionStoreEnabled()) {
+    const fromRedis = await redisReadSession(id);
+    if (fromRedis) {
+      sessions.set(id, fromRedis);
+      return fromRedis;
+    }
+    return null;
+  }
+
+  const fromDisk = await readSessionFromDisk(id);
+  if (fromDisk) {
+    sessions.set(id, fromDisk);
+    return fromDisk;
+  }
+  return null;
+}

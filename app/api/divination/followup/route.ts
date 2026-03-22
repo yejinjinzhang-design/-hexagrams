@@ -3,6 +3,8 @@ import { getSessionById } from "@/lib/storage/mock";
 import { sanitizeAiText } from "@/utils/sanitizeAiText";
 import type { YaoLineBoard } from "@/types/liuyao-board";
 
+export const runtime = "nodejs";
+
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
 function getApiKey(): string {
@@ -35,14 +37,16 @@ export async function POST(request: Request) {
 
     if (!sessionId) {
       return NextResponse.json(
-        { text: "DEBUG: sessionId missing" },
+        {
+          text: "未能识别本次占卦会话，请刷新结果页或重新起卦后再问。",
+        },
         { status: 400 }
       );
     }
 
     if (!question) {
       return NextResponse.json(
-        { text: "DEBUG: question missing" },
+        { text: "请输入要问的内容后再发送。" },
         { status: 400 }
       );
     }
@@ -52,7 +56,10 @@ export async function POST(request: Request) {
     if (!session || !session.board) {
       console.error("[followup] Session not found for sessionId:", sessionId);
       return NextResponse.json(
-        { text: "DEBUG: session not found" },
+        {
+          text:
+            "本次卦象会话已失效或不在当前服务器上（例如部署多实例、长时间未操作或进程重启）。请重新起卦生成新会话后再追问。",
+        },
         { status: 404 }
       );
     }

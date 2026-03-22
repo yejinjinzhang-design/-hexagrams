@@ -4,6 +4,8 @@ import { getSessionById } from "@/lib/storage/mock";
 import { sanitizeAiText } from "@/utils/sanitizeAiText";
 import type { YaoLineBoard } from "@/types/liuyao-board";
 
+export const runtime = "nodejs";
+
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
 function getApiKey(): string {

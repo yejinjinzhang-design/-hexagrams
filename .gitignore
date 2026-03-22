@@ -43,3 +43,6 @@ __pycache__
 
 # 匿名埋点事件日志（勿提交真实流量）
 data/analytics-events.jsonl
+
+# 占卦会话快照（勿提交用户数据）
+data/sessions/*.json
