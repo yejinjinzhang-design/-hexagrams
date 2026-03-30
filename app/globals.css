@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --bg: #f3eee4;
+  /* 与全页宣纸底一致，作降级底色 */
+  --bg: #f7f2ea;
   --surface: #f8f3ea;
   --border: #e5d8c7;
   --text: #3e3127;
@@ -18,49 +19,23 @@
   --font-body: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
 }
 
+html {
+  background-color: var(--bg);
+  min-height: 100%;
+}
+
 body {
   font-family: var(--font-body);
-  background: var(--bg);
+  /* 与氛围层同调的宣纸底；fixed 层之上仍透见层次 */
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 100% 80% at 8% 10%, rgba(196, 178, 152, 0.2), transparent 58%),
+    radial-gradient(ellipse 75% 58% at 94% 16%, rgba(110, 100, 88, 0.08), transparent 52%),
+    radial-gradient(ellipse 90% 65% at 50% 94%, rgba(158, 142, 122, 0.1), transparent 56%);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   position: relative;
   overflow-x: hidden;
-}
-
-/* 纸感纹理 + 很轻的墨晕氛围层（不抢内容） */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-  background-image:
-    radial-gradient(circle at 12% 10%, rgba(176, 138, 87, 0.14), transparent 45%),
-    radial-gradient(circle at 88% 18%, rgba(94, 111, 104, 0.12), transparent 48%),
-    radial-gradient(circle at 50% 92%, rgba(142, 90, 79, 0.08), transparent 55%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 35%),
-    repeating-linear-gradient(
-      45deg,
-      rgba(62, 49, 39, 0.025) 0px,
-      rgba(62, 49, 39, 0.025) 1px,
-      transparent 1px,
-      transparent 8px
-    );
-  opacity: 0.9;
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-  background-image:
-    radial-gradient(circle at 2% 2%, rgba(176, 138, 87, 0.18), transparent 18%),
-    radial-gradient(circle at 98% 2%, rgba(176, 138, 87, 0.18), transparent 18%),
-    radial-gradient(circle at 2% 98%, rgba(94, 111, 104, 0.12), transparent 18%),
-    radial-gradient(circle at 98% 98%, rgba(94, 111, 104, 0.12), transparent 18%);
-  opacity: 0.35;
 }
 
 @keyframes soft-spin {

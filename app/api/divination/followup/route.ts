@@ -91,6 +91,10 @@ export async function POST(request: Request) {
 
     const movingLines = session.divination.movingLines;
 
+    const postAnalysisBlock =
+      session.postAnalysisFlatText?.trim() ||
+      "（走势分析正文未单独缓存，仍以卦象与用户所问为纲。）";
+
     const system = `
 你是一位擅长六爻解读的东方命理老师傅。
 当前用户已经就同一件事起过一卦，并完成了前事验证与事情走势分析。
@@ -137,6 +141,9 @@ ${userInput.question}
 
 【六爻明细（自上而下）】
 ${benLines}
+
+【事情走势分析（再断其后）】
+${postAnalysisBlock}
 
 【说明】
 - 用户此前已经看过此卦的「前事验证」与「事情走势分析」，现在的提问是在此基础上的卦后追问；

@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 import { buildPreAnalysisFeedbackSummary } from "@/lib/pre-analysis-feedback";
-import { getSessionById } from "@/lib/storage/mock";
+import {
+  finalizePostAnalysisResult,
+  formatPostAnalysisForContext,
+  parsePostAnalysisStructuredContent,
+} from "@/lib/divination/analysis-structured";
+import { LEAD_LAYER_PROSE_STYLE_BLOCK } from "@/lib/divination/lead-layer-prose-style";
+import { formatPreCheckForAnalysis } from "@/lib/divination/precheck-structured";
+import { getSessionById, updateSession } from "@/lib/storage/mock";
 import { sanitizeAiText } from "@/utils/sanitizeAiText";
 import type { YaoLineBoard } from "@/types/liuyao-board";
+import type { PostAnalysisStructuredResult } from "@/lib/storage/types";
 
 export const runtime = "nodejs";
 
@@ -68,6 +76,9 @@ export async function POST(request: Request) {
     const movingLines = session.divination.movingLines;
 
     const preCheckBlock =
+      (session.preCheckResult
+        ? formatPreCheckForAnalysis(session.preCheckResult).trim()
+        : null) ||
       session.preCheckResultText?.trim() ||
       "（前事验证正文未单独缓存，仍以卦象与用户所问为纲。）";
 
@@ -81,25 +92,30 @@ export async function POST(request: Request) {
 
     const system = `
 你是一位精通六爻断卦的老师傅。
-此刻的任务是在已经大致验过前象之后，细断此卦后势与事态走向。
+此刻是在前象已验之后，细断此卦之后势与走向。
 
-若用户提供了「对前事验证的补充与修正」且内容非空，须在后续各段分析中切实纳入，不可轻忽；那是为对齐现实而非更换问卜主题，仍须在本卦与原问题框架内参断。
+若用户提供了「对前事验证的补充与修正」且内容非空，须在全部分层中切实纳入，不可轻忽；那是为对齐现实而非更换问卜主题，仍须在本卦与原问题框架内参断。
 
 【重要约束】
-只根据当前这张卦象与用户的问题来分析，不可脱离卦象空谈；
-不要使用「一定会」「必然」这类绝对语气，可用「多半」「大致」「需警惕」等较为温和的表达；
-需要兼顾吉凶与可行的应对之道，而不是单纯报喜或报忧。
+只根据当前卦象与用户所问来分析，不可脱离卦象空谈；
+勿用「一定」「必然」等绝对语气，可用「多半」「大致」「似」「需留意」等克制表述；
+吉凶与可行应对须兼顾，勿单面讨好或单面恫吓。
 
 【说话风格】
-语言自然连贯，像在与求测者面对面说话；
-可以按逻辑分段展开，但不要用「一、二、三」这类生硬小标题；
-每一个重要判断，都要点出卦中的依据，而不是只给结论。
+以现代书面中文为主：清楚、克制、好读；把卦理与后势说明白，而不是仿古文评注或聊天碎嘴。
+勿用「第一点、第二点」式编号；JSON 各字段内部也不要 markdown、不要 #、**、列表符号。
+
+${LEAD_LAYER_PROSE_STYLE_BLOCK}
+
+【分层职责（须由 JSON 三字段体现）】
+1）summaryText（先陈其势——后势总览，非一两句空泛断语）：须一至两段、信息饱满而语句清楚（全文汉字宜在三百字以上），使用户不读后文亦能把握后势大意七八成；文风必须严格遵守上文【第一折书面语体】：中短句、一句一义、勿整段赋式黏连。优先从整卦、卦名取象、本卦气质、变卦所向、本变合参之人事意味起笔，不必先拘泥某一爻。须自然融贯下列维度之多者（语气连贯、分段清楚即可，勿列「1、2、3」，勿写「总结如下」）：①整体局势先定调（顺、缓、阻、反复、将成未成、可成而迟、眼下难定、外顺内滞等，留分寸）；②当前阶段具体化（起念、筹备、推进、卡住、等待、反复、收口、临门未定等）；③时间节奏（快与慢、近期动静、是否须待某段方更明朗、先缓后明等）；④过程中更可能出现的现实情节（补材料、来回修改、等待批复、流程拖延、先近后搁、差最后一步等），指类不武断；⑤内因与外缘何者偏显；⑥最终趋向（缓成、不速、有机在后段、眼前未稳非无望、强进反偏等），勿铁口。末可一句提醒与实事参证。
+2）reasoningText：对应「再释其由」。以清楚现代书面语解释何以得出上一层判断；可综论卦象大意、卦名取象、本卦与变卦之关系、世应人事、动爻变化、月日节候、五行生克等——但不必样样写全，亦不必按固定顺序；择与本卦最相干者书之，使人知其理路；勿仿古文连缀。宜在约一百八十汉字以上。
+3）detailedSections：对应「细参卦旨」。须为数组，含 2 至 5 个对象，每个对象有 title（短而稳的四五字内小标题，如「世应与人事」「本变之机」「阻碍所在」，勿生僻）与 content（该标题下一段完整分析，现代书面语、说清楚为主）。小标题须依本卦信息量灵活自拟，不可千篇一律；勿机械规定「必须先动爻再世应再月建」；若卦名、典故、大象、时机、进退、人我之势等最能说明问题，即可单列成节。
 
 【输出格式硬性要求】
-输出必须为纯文本，不要使用 markdown、标题符号、加粗符号、列表符号或任何格式化标记。
-不要使用 #、**、-、*、1.、2.、3. 等任何 markdown 或编号列表形式。
-不要写「### 分析」，不要写「**某卦名**」，不要写以数字或短横线开头的条目。
-只输出自然语言段落，可以分段，但每一段都应当是普通的中文句子。
+只输出一个 JSON 对象，不要代码围栏，不要前后赘语。
+键名必须完全一致：summaryText（字符串）、reasoningText（字符串）、detailedSections（数组，元素为 { "title": "…", "content": "…" }）。
+不得省略键；detailedSections 长度须在 2～5 之间；各 content 须为完整段落，可换行分段，勿堆砌无释之术语。
 `.trim();
 
     const userPrompt = `
@@ -130,7 +146,7 @@ ${preCheckBlock}
 【用户对前事验证的补充与修正】
 ${
   feedbackBlock
-    ? `以下内容为用户对前事验证结果的补充与修正，并非新的问卜主题。请将其作为本次卦象分析的附加上下文，在后续走势判断、关系判断、阻碍判断与建议中优先纳入考虑，不可忽略。
+    ? `以下内容为用户对前事验证结果的补充与修正，并非新的问卜主题。请将其作为本次卦象分析的附加上下文，在走势、关系、阻碍与建议中优先纳入，不可忽略。
 
 ${feedbackBlock}`
     : "（用户未另作补述，可仅以前验与卦象为准。）"
@@ -139,35 +155,27 @@ ${feedbackBlock}`
 【六爻明细（自上而下）】
 ${benLines}
 
-【分析重点】
-请在前象大致相合的前提下，围绕下列要点展开正式分析：
-- 先看用神、世应之旺衰、生克、合冲，说明整件事的主线与自己在其中所处的位置；
-- 结合动爻：哪些爻发动，是否化出有利或不利之象（如化回头生、回头克、进退神等），推断事情后续的转折与节奏；
-- 说明六亲之间的关系：财、官、兄弟、父母、子孙，对本事的是非得失各自有什么影响；
-- 若月建、日辰对用神、世应、动爻有生克冲合，请一并说明对成败轻重、过程顺逆的影响；
-- 对于时间层面，可以大致指出「接下来一段时间」是利于推进、适合观望，还是宜先整顿自身、缓步而行。
+【分析提示（可择用，勿当作死板提纲）】
+你可据卦酌取：整体大象与卦名寓意；本卦与变卦「从何而至、向何而去」；世应与人事、主客与进退；动爻所显之变化与关节；月建日辰之助抑；内外因与阻碍、转机；节奏与应期之分寸；典故取象若有助于说清，亦可入文。不必面面俱到，以说清本卦与用户之问为主。
 
-【请重点回答】
-- 从此卦来看，这件事后续发展的总体倾向如何，是「渐进有机」还是「波折较多」；
-- 过程中需要特别留心哪些风险位点或关键人物（结合动爻、六亲、六神等说明依据）；
-- 若想尽量趋利避害，此刻求测者可以如何布局与应对（给出1-3条具体可行的建议）。
+【须覆盖之要旨（散见于各层，勿单列清单给用户）】
+后势总体倾向与须警惕之处；趋利避害时可行的应对一二（融入叙述，勿写成操作手册条目）。
 
-【表达方式要求】
-- 用自然、连贯的中文断卦口吻，不要输出 JSON 或代码；
-- 不要只写几句宽泛安慰，要在话语中点明「为什么这样看」；
-- 末尾用一两句温和收束，例如提醒「卦只是当下一念之象，后事仍需你在现实中谨慎拿捏」。
+【先陈其势（summaryText）专嘱】
+此字段不是一句话摘要，而是对整件事后势的「大势总览」：围绕整体局势、当前阶段、时间节奏、可能发生的现实情节、内外因素、最终趋向来写，允许且鼓励从本卦、变卦、卦名、整体取象切入，不必先拆世应动爻。遣词造句须与【第一折书面语体】一致，优先让普通用户一遍读懂。
 
-【可用补充信息】
-- 若有帮助，你也可以简单提及本卦与变卦在意象上的对比，说明「从何而来，向何处去」的大致意味。
-
-请据此给出一段完整的正式分析。`.trim();
+请输出符合系统说明的 JSON。
+`.trim();
 
     const deepseekBody = {
       model: "deepseek-chat",
       messages: [
-        { role: "system", content: system },
-        { role: "user", content: userPrompt },
+        { role: "system" as const, content: system },
+        { role: "user" as const, content: userPrompt },
       ],
+      ...(process.env.DEEPSEEK_JSON_MODE === "1"
+        ? { response_format: { type: "json_object" as const } }
+        : {}),
     };
 
     const divinationDataForLog = {
@@ -197,7 +205,7 @@ ${benLines}
 
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10_000);
+      const timeout = setTimeout(() => controller.abort(), 60_000);
 
       console.log("ANALYSIS DeepSeek URL:", DEEPSEEK_URL);
       console.log("ANALYSIS DeepSeek model:", deepseekBody.model);
@@ -272,8 +280,23 @@ ${benLines}
       });
     }
 
-    const cleanText = sanitizeAiText(text);
-    return NextResponse.json({ text: cleanText });
+    const parsedStruct = parsePostAnalysisStructuredContent(text);
+    const structured: PostAnalysisStructuredResult = finalizePostAnalysisResult(
+      parsedStruct,
+      text
+    );
+    const flatText = formatPostAnalysisForContext(structured);
+    const cleanFlat = sanitizeAiText(flatText);
+
+    await updateSession(sessionId, {
+      postAnalysisResult: structured,
+      postAnalysisFlatText: cleanFlat,
+    });
+
+    return NextResponse.json({
+      analysis: structured,
+      text: cleanFlat,
+    });
   } catch (error) {
     console.error("[analysis] Unexpected ERROR:", error);
     return NextResponse.json({

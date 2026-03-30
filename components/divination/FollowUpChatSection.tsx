@@ -31,7 +31,7 @@ export function FollowUpChatSection({ sessionId }: FollowUpChatSectionProps) {
     {
       id: "welcome",
       role: "assistant",
-      content: "卦意已陈，若仍有未决，可继续参问。",
+      content: "卦意已陈，若仍有未决，可继续参问",
     },
   ]);
   const [input, setInput] = useState("");

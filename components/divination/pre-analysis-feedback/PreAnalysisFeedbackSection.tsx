@@ -82,9 +82,6 @@ export function PreAnalysisFeedbackSection({
         <p className="mt-1 text-[11px] leading-relaxed text-[#7a6751]">
           若前事所验未尽贴切，可于此补述一二
         </p>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-[#7a6751]">
-          补充现状与修正之处，可使后续分析更贴近实际
-        </p>
       </header>
 
       <FeedbackMessageList messages={messages} />
@@ -104,7 +101,7 @@ export function PreAnalysisFeedbackSection({
       ) : null}
 
       <p className="mt-3 text-[10px] leading-relaxed text-[#a69378]">
-        补充前情后，后续分析会更贴近实际；若不补述，亦可径直续断其后。
+        补充前情后，后续分析会更贴近实际；若不补述，亦可径直续断其后
       </p>
     </section>
   );

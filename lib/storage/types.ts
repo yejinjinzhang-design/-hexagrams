@@ -19,6 +19,30 @@ export type PreAnalysisFeedbackBundle = {
   summary: string;
 };
 
+/** 「再断其后」分层：先势 / 再因 / 细参（动态小节） */
+export type PostAnalysisDetailSection = {
+  title: string;
+  content: string;
+};
+
+export type PostAnalysisStructuredResult = {
+  summaryTitle: string;
+  summaryText: string;
+  reasoningTitle: string;
+  reasoningText: string;
+  detailedSections: PostAnalysisDetailSection[];
+};
+
+/** 「验证前事」分层输出（模型 JSON → 前端分区展示） */
+export type PreCheckStructuredResult = {
+  /** 第一层：先观其应式前情总览，高密度、少术数专名 */
+  plainValidationSummary: string;
+  /** 第二层：为何如此判断；可有少量爻象术语，须配白话 */
+  reasoningExplanation: string;
+  /** 第三层：术数细解，可按动爻/世应/月日/五行分段 */
+  technicalInterpretation: string;
+};
+
 export interface StoredDivinationSession {
   id: string;
   userInput: UserQuestionInput;
@@ -52,11 +76,22 @@ export interface StoredDivinationSession {
   rawText?: string;
   createdAt: string;
 
-  /** 前事验证（先观应象）模型输出正文，供后续分析引用 */
+  /**
+   * 前事验证结构化输出：白话结论 / 因何如此 / 术数细解
+   * 供结果页分层展示；`preCheckResultText` 为其扁平拼接，供后续分析 API 注入
+   */
+  preCheckResult?: PreCheckStructuredResult;
+
+  /** 前事验证扁平正文（由 preCheckResult 生成或与旧版兼容的纯文本） */
   preCheckResultText?: string;
 
   /** 用户对前验的补述与校正 */
   preAnalysisFeedback?: PreAnalysisFeedbackBundle;
+
+  /** 走势分析结构化结果（再断其后） */
+  postAnalysisResult?: PostAnalysisStructuredResult;
+  /** 走势分析扁平正文，供追问 API 等注入 */
+  postAnalysisFlatText?: string;
 
   userRating?: number;
   userFeedback?: string;
