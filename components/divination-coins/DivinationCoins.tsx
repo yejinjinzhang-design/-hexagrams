@@ -326,7 +326,7 @@ export function DivinationCoins({
 
   return (
     <div
-      className="flex flex-col items-center rounded-[16px] border border-[#E5D8C7] bg-[#F8F3EA] shadow-[0_8px_30px_rgba(0,0,0,0.06)] w-full"
+      className="ink-panel flex w-full flex-col items-center"
       style={{
         padding: "16px",
         gap: "24px",
@@ -344,11 +344,11 @@ export function DivinationCoins({
         {/* 外层托盘 */}
         <div
           aria-hidden
-          className="absolute inset-0 rounded-[16px] border border-[#E5D8C7]/60"
+          className="absolute inset-0 rounded-[16px] border border-[#E5D8C7]/55"
           style={{
             backgroundImage:
-              "linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0))",
-            backgroundColor: "#F3EEDF",
+              "linear-gradient(180deg, rgba(255,255,255,0.58), rgba(255,255,255,0.08)), radial-gradient(ellipse 70% 60% at 20% 10%, rgba(176,138,87,0.10), transparent 62%)",
+            backgroundColor: "rgba(243,238,223,0.72)",
           }}
         />
 
@@ -358,7 +358,7 @@ export function DivinationCoins({
           className="absolute left-1/2 top-[18px] h-[110px] w-[94%] -translate-x-1/2 rounded-[14px]"
           style={{
             backgroundImage:
-              "radial-gradient(circle at 20% 20%, rgba(176,138,87,0.16), transparent 45%), radial-gradient(circle at 80% 70%, rgba(94,111,104,0.12), transparent 52%), repeating-linear-gradient(45deg, rgba(62,49,39,0.03) 0px, rgba(62,49,39,0.03) 1px, transparent 1px, transparent 7px)",
+              "radial-gradient(ellipse 56% 44% at 22% 18%, rgba(176,138,87,0.13), transparent 58%), radial-gradient(ellipse 52% 42% at 82% 72%, rgba(94,111,104,0.08), transparent 60%), linear-gradient(145deg, rgba(255,252,246,0.72), rgba(240,228,208,0.42))",
             backgroundColor: "#F7F0E1",
             boxShadow:
               "inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1px 0 rgba(62,49,39,0.05)",
@@ -421,7 +421,7 @@ export function DivinationCoins({
         type="button"
         onClick={isTossing ? stopAndSettle : startToss}
         disabled={disabled || forceSides != null || isSettling}
-        className="rounded-full bg-[#C6A46C] px-7 text-sm font-medium text-[#fff9ee] shadow-[0_6px_18px_rgba(198,164,108,0.28)] disabled:cursor-not-allowed disabled:bg-[#d5c3a4] hover:bg-[#B38B43] transition-colors"
+        className="ink-button-primary px-7 text-sm disabled:cursor-not-allowed disabled:opacity-55"
         style={{ minHeight: "44px" }}
       >
         {isTossing ? "点击停止落卦" : isSettling ? "收势落定中..." : "轻抛铜钱"}

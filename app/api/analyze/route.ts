@@ -24,6 +24,11 @@ export async function POST(request: Request) {
         calendar?: "lunar";
         numberInput?: string;
         manualCoins?: CoinSide[][];
+        specified?: {
+          upperNum: number;
+          lowerNum: number;
+          movingLines: number[];
+        };
         // 兼容旧版本
         numbers?: [number, number, number];
       };

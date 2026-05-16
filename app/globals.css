@@ -3,16 +3,16 @@
 @tailwind utilities;
 
 :root {
-  /* 与全页宣纸底一致，作降级底色 */
-  --bg: #f7f2ea;
-  --surface: #f8f3ea;
-  --border: #e5d8c7;
-  --text: #3e3127;
-  --muted: #8c7a6b;
-  --accent-gold: #b08a57;
+  /* 近白纸面：避免大面积米黄"AI 模板"感，只留极淡暖意 */
+  --bg: #fafaf7;
+  --surface: #ffffff;
+  --border: #e7e3dc;
+  --text: #2c2620;
+  --muted: #8a8278;
+  --accent-gold: #a07e4f;
   --accent-teal: #5e6f68;
   --accent-seal: #8e5a4f;
-  --accent-primary: #c6a46c;
+  --accent-primary: #b08a57;
 
   --font-title: "Noto Serif SC", "Source Han Serif SC", "Songti SC",
     "STSongti-SC", serif;
@@ -26,16 +26,92 @@ html {
 
 body {
   font-family: var(--font-body);
-  /* 与氛围层同调的宣纸底；fixed 层之上仍透见层次 */
   background-color: var(--bg);
-  background-image:
-    radial-gradient(ellipse 100% 80% at 8% 10%, rgba(196, 178, 152, 0.2), transparent 58%),
-    radial-gradient(ellipse 75% 58% at 94% 16%, rgba(110, 100, 88, 0.08), transparent 52%),
-    radial-gradient(ellipse 90% 65% at 50% 94%, rgba(158, 142, 122, 0.1), transparent 56%);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   position: relative;
   overflow-x: hidden;
+}
+
+@layer components {
+  .ink-page-title {
+    @apply font-ritual-title text-[26px] font-semibold text-[#1f1a16] md:text-[32px];
+    letter-spacing: 0.18em;
+  }
+
+  .ink-eyebrow {
+    @apply font-ritual-title text-[11px] font-medium text-[#7a7268] md:text-[12px];
+    letter-spacing: 0.18em;
+  }
+
+  .ink-panel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(46, 38, 31, 0.08);
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow:
+      0 1px 0 rgba(46, 38, 31, 0.03),
+      0 12px 32px rgba(46, 38, 31, 0.04);
+  }
+
+  .ink-panel > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .ink-subpanel {
+    position: relative;
+    border: 1px solid rgba(46, 38, 31, 0.07);
+    border-radius: 14px;
+    background: #fdfdfb;
+  }
+
+  .ink-subpanel-muted {
+    border: 1px solid rgba(46, 38, 31, 0.06);
+    border-radius: 12px;
+    background: #f7f6f2;
+  }
+
+  .ink-input {
+    @apply w-full rounded-[12px] px-3 py-2 text-sm text-[#2c2620] outline-none transition-colors;
+    border: 1px solid rgba(46, 38, 31, 0.14);
+    background: #ffffff;
+  }
+
+  .ink-input:focus {
+    border-color: rgba(160, 126, 79, 0.9);
+    box-shadow: 0 0 0 3px rgba(160, 126, 79, 0.12);
+  }
+
+  .ink-button-primary {
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-full px-6 py-3 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-55;
+    color: #fafaf7;
+    background: #2c2620;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  }
+
+  .ink-button-primary:hover:not(:disabled) {
+    background: #1f1a16;
+    transform: translateY(-1px);
+  }
+
+  .ink-button-secondary {
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-full px-6 py-3 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-55;
+    color: #2c2620;
+    border: 1px solid rgba(46, 38, 31, 0.18);
+    background: #ffffff;
+  }
+
+  .ink-button-secondary:hover:not(:disabled) {
+    background: #f7f6f2;
+    transform: translateY(-1px);
+  }
+
+  .ink-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(46, 38, 31, 0.12), transparent);
+  }
 }
 
 @keyframes soft-spin {

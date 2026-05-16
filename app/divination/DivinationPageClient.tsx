@@ -10,7 +10,9 @@ import {
   deriveHexagramFromDate,
   deriveHexagramFromManualLines,
   deriveHexagramFromNumbersInput,
+  deriveHexagramFromSpecified,
   deriveYaoFromCoins,
+  TRIGRAM_OPTIONS,
   type DivinationMethod
 } from "@/lib/divination-methods";
 import type { Gender, LineKind } from "@/types/divination";
@@ -43,6 +45,20 @@ function lineKindToLabel(kind: LineKind): string {
     default:
       return kind;
   }
+}
+
+function yaoPositionLabel(index: number): string {
+  return index === 1
+    ? "初爻"
+    : index === 2
+      ? "二爻"
+      : index === 3
+        ? "三爻"
+        : index === 4
+          ? "四爻"
+          : index === 5
+            ? "五爻"
+            : "上爻";
 }
 
 export default function DivinationPageClient() {
@@ -89,6 +105,9 @@ export default function DivinationPageClient() {
         Array.from({ length: 3 }, () => null)
       )
   );
+  const [specifiedUpperNum, setSpecifiedUpperNum] = useState(1);
+  const [specifiedLowerNum, setSpecifiedLowerNum] = useState(1);
+  const [specifiedMovingLines, setSpecifiedMovingLines] = useState<number[]>([]);
 
   useEffect(() => {
     setDiceSums([]);
@@ -99,6 +118,9 @@ export default function DivinationPageClient() {
     setManualCoins(
       Array.from({ length: 6 }, () => Array.from({ length: 3 }, () => null))
     );
+    setSpecifiedUpperNum(1);
+    setSpecifiedLowerNum(1);
+    setSpecifiedMovingLines([]);
     prevDiceLenRef.current = 0;
   }, [method]);
 
@@ -141,6 +163,38 @@ export default function DivinationPageClient() {
     setDiceSums(next);
   };
 
+  const updateCastTimeFromLocal = (value: string) => {
+    setDateTimeLocal(value);
+    if (method === "lunarDate") {
+      setDiceSums([]);
+    }
+    try {
+      if (!value) return;
+      const instant = parseDatetimeLocalAsShanghaiInstant(value);
+      setCastTimeISO(instant.toISOString());
+    } catch {
+      // datetime-local 编辑过程中可能出现半截值，提交时再提示用户。
+    }
+  };
+
+  const useCurrentCastTime = () => {
+    setDateTimeLocal(shanghaiNowDatetimeLocalValue());
+    setCastTimeISO(new Date().toISOString());
+    if (method === "lunarDate") {
+      setDiceSums([]);
+    }
+  };
+
+  const resolveSelectedCastTimeISO = () => {
+    if (!dateTimeLocal) {
+      throw new Error("请先选择起卦时间。");
+    }
+    const instant = parseDatetimeLocalAsShanghaiInstant(dateTimeLocal);
+    const iso = instant.toISOString();
+    setCastTimeISO(iso);
+    return iso;
+  };
+
   const handleReset = () => {
     trackEvent("reset_divination", { metadata: { method } });
     setDiceSums([]);
@@ -148,14 +202,25 @@ export default function DivinationPageClient() {
     setError(null);
     setManualCoins(Array.from({ length: 6 }, () => Array.from({ length: 3 }, () => null)));
     setNumberInput("");
-    setDateTimeLocal(shanghaiNowDatetimeLocalValue());
-    setCastTimeISO(new Date().toISOString());
+    useCurrentCastTime();
+    setSpecifiedUpperNum(1);
+    setSpecifiedLowerNum(1);
+    setSpecifiedMovingLines([]);
   };
 
   const readyForAnalysis = diceSums.length === 6;
 
   const previewResult =
     diceSums.length === 6 ? computeDivinationResult(diceSums) : null;
+  const specifiedPreview = useMemo(
+    () =>
+      deriveHexagramFromSpecified({
+        upperNum: specifiedUpperNum,
+        lowerNum: specifiedLowerNum,
+        movingLines: specifiedMovingLines,
+      }),
+    [specifiedLowerNum, specifiedMovingLines, specifiedUpperNum]
+  );
 
   const castTimeText = useMemo(
     () => formatInstantInTimeZoneZh(castTimeISO),
@@ -177,10 +242,8 @@ export default function DivinationPageClient() {
     setError(null);
 
     try {
-      const timestampMs =
-        method === "lunarDate"
-          ? new Date(castTimeISO).getTime()
-          : Date.now();
+      const selectedCastTimeISO = resolveSelectedCastTimeISO();
+      const timestampMs = new Date(selectedCastTimeISO).getTime();
       if (!Number.isFinite(timestampMs)) {
         throw new Error("起卦时间无效，请重新选择或起卦。");
       }
@@ -193,6 +256,14 @@ export default function DivinationPageClient() {
             ? { numberInput }
             : method === "manual"
               ? { manualCoins: manualCoins.map((line) => line as CoinSide[]) }
+            : method === "specified"
+              ? {
+                  specified: {
+                    upperNum: specifiedUpperNum,
+                    lowerNum: specifiedLowerNum,
+                    movingLines: specifiedMovingLines,
+                  },
+                }
               : undefined;
 
       const res = await fetch("/api/analyze", {
@@ -228,14 +299,17 @@ export default function DivinationPageClient() {
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[420px] px-4 py-6">
+      <div className="mx-auto max-w-[430px] px-3 py-5 md:px-4 md:py-6">
         {/* 1) 标题区 */}
-        <div className="mb-4 text-center font-ritual-title text-[20px] font-semibold tracking-[2px] text-[#3A2F26] md:text-[22px]">
-          起卦
+        <div className="mb-5 text-center">
+          <p className="ink-eyebrow">六爻成象</p>
+          <h1 className="mt-1 font-ritual-title text-[22px] font-semibold tracking-[0.28em] text-[#34281f] md:text-[24px]">
+            起卦
+          </h1>
         </div>
 
         {/* 2) 信息卡片 */}
-        <section className="mb-5 rounded-[16px] border border-[#E5D8C7] bg-[#F8F3EA] p-4 text-[#3A2F26] box-border">
+        <section className="mb-5 ink-panel p-4 text-[#3A2F26] box-border">
           <div className="mb-3">
             <div className="text-[12px] font-medium font-ritual-title text-[#8C7A6B]">
               所问
@@ -276,7 +350,7 @@ export default function DivinationPageClient() {
         </section>
 
         {/* 3) 起卦方式 */}
-        <section className="mb-5 rounded-[16px] border border-[#E5D8C7] bg-[#F8F3EA] p-4 text-[#3A2F26] box-border">
+        <section className="mb-5 ink-panel p-4 text-[#3A2F26] box-border">
           <div className="mb-3 text-center font-ritual-title text-[14px] font-semibold tracking-[0.2em] text-[#8C7A6B]">
             起卦方式
           </div>
@@ -287,6 +361,7 @@ export default function DivinationPageClient() {
                 ["lunarDate", "时间卦"],
                 ["number", "数字起卦"],
                 ["manual", "手动录入"],
+                ["specified", "指定卦"],
               ] as Array<[DivinationMethod, string]>
             ).map(([m, label]) => {
               const active = method === m;
@@ -297,8 +372,8 @@ export default function DivinationPageClient() {
                   onClick={() => setMethod(m)}
                   className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
                     active
-                      ? "bg-[#C6A46C] text-[#fff9ee] shadow-[0_6px_18px_rgba(198,164,108,0.18)]"
-                      : "bg-transparent border border-[#E5D8C7] text-[#8B6B3F] hover:bg-[#F0E4D1]"
+                      ? "border border-[#b08a57] bg-[linear-gradient(135deg,#b98b4f,#d0ab70)] text-[#fff9ee] shadow-[0_8px_18px_rgba(145,95,46,0.18)]"
+                      : "border border-[#d7c6aa]/85 bg-[#fffaf2]/55 text-[#7a6349] hover:bg-[#f4ead8]"
                   }`}
                   style={{ minHeight: 36 }}
                 >
@@ -307,6 +382,33 @@ export default function DivinationPageClient() {
               );
             })}
           </div>
+        </section>
+
+        <section className="mb-5 ink-panel p-4 text-[#3A2F26] box-border">
+          <div className="mb-3 text-center font-ritual-title text-[14px] font-semibold tracking-[0.2em] text-[#8C7A6B]">
+            起卦时间
+          </div>
+          <label className="text-[12px] text-[#8C7A6B]">
+            可改为旧卦当时的时间（北京时间）
+            <input
+              type="datetime-local"
+              value={dateTimeLocal}
+              onChange={(e) => updateCastTimeFromLocal(e.target.value)}
+              className="mt-2 w-full ink-input text-[14px]"
+            />
+          </label>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={useCurrentCastTime}
+              className="ink-button-secondary w-full px-5 py-2 text-sm"
+            >
+              使用当前时间
+            </button>
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-[#a28f73]">
+            铜钱、数字、手动录入、指定卦都会按这里的时间排盘；时间卦也会用这里的时间推卦。
+          </p>
         </section>
 
         {/* 4) 起卦输入（按方式切换） */}
@@ -320,56 +422,34 @@ export default function DivinationPageClient() {
           )}
 
           {method === "lunarDate" && (
-            <div className="rounded-[16px] border border-[#E5D8C7] bg-[#F8F3EA] p-4 text-[#3A2F26] shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-opacity duration-150">
+            <div className="ink-panel p-4 text-[#3A2F26] transition-opacity duration-150">
               <div className="text-center font-ritual-title text-[16px] font-semibold text-[#3A2F26]">
                 时间起卦
               </div>
               <div className="mt-2 text-center text-[12px] text-[#8C7A6B]">
-                以所定之时，起此一卦
+                以上方所选时间，起此一卦
               </div>
 
               <div className="mt-4 flex flex-col gap-3">
-                <label className="text-[12px] text-[#8C7A6B]">
-                  起卦时间（北京时间，日期与时刻）
-                  <input
-                    type="datetime-local"
-                    value={dateTimeLocal}
-                    onChange={(e) => setDateTimeLocal(e.target.value)}
-                    className="mt-2 w-full rounded-[12px] border border-[#E5D8C7] bg-[#FBF5EB] px-3 py-2 text-[14px] text-[#3A2F26] outline-none focus:border-[#C6A46C]"
-                  />
-                </label>
-
+                <div className="ink-subpanel-muted px-3 py-2 text-center text-[12px] text-[#5c4a38]">
+                  {castTimeText}
+                </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDateTimeLocal(shanghaiNowDatetimeLocalValue());
-                      setCastTimeISO(new Date().toISOString());
-                    }}
-                    className="w-full rounded-[999px] border border-[#C89B5A] bg-transparent px-5 py-2 text-sm text-[#8B6B3F] hover:bg-[rgba(200,155,90,0.08)] transition-colors"
-                  >
-                    使用当前时间
-                  </button>
                   <button
                     type="button"
                     disabled={!dateTimeLocal}
                     onClick={() => {
                       try {
-                        if (!dateTimeLocal) return;
-                        const instant = parseDatetimeLocalAsShanghaiInstant(
-                          dateTimeLocal
-                        );
-                        const iso = instant.toISOString();
-                        setCastTimeISO(iso);
+                        const iso = resolveSelectedCastTimeISO();
                         const r = deriveHexagramFromDate(iso);
                         setDiceSums(r.diceSums);
                       } catch {
                         setError("日期起卦失败，请重试。");
                       }
                     }}
-                    className="w-full rounded-[999px] bg-[#C6A46C] px-5 py-2 text-sm font-medium text-[#fff9ee] shadow-[0_6px_18px_rgba(198,164,108,0.22)] disabled:cursor-not-allowed disabled:bg-[#d5c3a4] hover:bg-[#B38B43] transition-colors"
+                    className="ink-button-primary w-full px-5 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-55"
                   >
-                    据此起卦
+                    按此时间起卦
                   </button>
                 </div>
               </div>
@@ -377,7 +457,7 @@ export default function DivinationPageClient() {
           )}
 
           {method === "number" && (
-            <div className="rounded-[16px] border border-[#E5D8C7] bg-[#F8F3EA] p-4 text-[#3A2F26] shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-opacity duration-150">
+            <div className="ink-panel p-4 text-[#3A2F26] transition-opacity duration-150">
               <div className="text-center font-ritual-title text-[16px] font-semibold text-[#3A2F26]">
                 数字起卦
               </div>
@@ -395,7 +475,7 @@ export default function DivinationPageClient() {
                       const v = e.target.value.replace(/[^\d.]/g, "");
                       setNumberInput(v);
                     }}
-                    className="mt-2 w-full rounded-[12px] border border-[#E5D8C7] bg-[#FBF5EB] px-3 py-2 text-[14px] text-[#3A2F26] outline-none focus:border-[#C6A46C]"
+                    className="mt-2 w-full ink-input text-[14px]"
                   />
                 </label>
 
@@ -405,13 +485,13 @@ export default function DivinationPageClient() {
                   onClick={() => {
                     try {
                       const r = deriveHexagramFromNumbersInput(numberInput);
-                      setCastTimeISO(new Date().toISOString());
+                      resolveSelectedCastTimeISO();
                       setDiceSums(r.diceSums);
                     } catch {
                       setError("数字起卦失败，请重试。");
                     }
                   }}
-                  className="w-full rounded-[999px] bg-[#C6A46C] px-5 py-2 text-sm font-medium text-[#fff9ee] shadow-[0_6px_18px_rgba(198,164,108,0.22)] disabled:cursor-not-allowed disabled:bg-[#d5c3a4] hover:bg-[#B38B43] transition-colors"
+                  className="ink-button-primary w-full px-5 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-55"
                 >
                   据数起卦
                 </button>
@@ -419,8 +499,202 @@ export default function DivinationPageClient() {
             </div>
           )}
 
+          {method === "specified" && (
+            <div className="ink-panel p-4 text-[#3A2F26] transition-opacity duration-150">
+              <div className="text-center font-ritual-title text-[16px] font-semibold text-[#3A2F26]">
+                指定卦
+              </div>
+              <div className="mt-2 text-center text-[12px] text-[#8C7A6B]">
+                直接指定本卦，并选择几爻发动
+              </div>
+
+              <div className="mt-4 space-y-4">
+                <div>
+                  <div className="mb-2 text-[12px] text-[#8C7A6B]">上卦</div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {TRIGRAM_OPTIONS.map((gua) => {
+                      const active = specifiedUpperNum === gua.num;
+                      return (
+                        <button
+                          key={`upper-${gua.num}`}
+                          type="button"
+                          onClick={() => {
+                            setSpecifiedUpperNum(gua.num);
+                            setDiceSums([]);
+                          }}
+                          className={`rounded-full border px-3 py-2 text-[12px] transition-colors ${
+                            active
+                              ? "border-[#b08a57] bg-[#efe0c4] text-[#4b3423]"
+                              : "border-[#D7C6AA] bg-[#fffaf2]/50 text-[#8B6B3F] hover:bg-[#F0E4D1]"
+                          }`}
+                        >
+                          {gua.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 text-[12px] text-[#8C7A6B]">下卦</div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {TRIGRAM_OPTIONS.map((gua) => {
+                      const active = specifiedLowerNum === gua.num;
+                      return (
+                        <button
+                          key={`lower-${gua.num}`}
+                          type="button"
+                          onClick={() => {
+                            setSpecifiedLowerNum(gua.num);
+                            setDiceSums([]);
+                          }}
+                          className={`rounded-full border px-3 py-2 text-[12px] transition-colors ${
+                            active
+                              ? "border-[#b08a57] bg-[#efe0c4] text-[#4b3423]"
+                              : "border-[#D7C6AA] bg-[#fffaf2]/50 text-[#8B6B3F] hover:bg-[#F0E4D1]"
+                          }`}
+                        >
+                          {gua.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="ink-subpanel-muted px-4 py-3">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="font-ritual-title text-[14px] font-semibold text-[#3A2F26]">
+                        {specifiedPreview.primaryHexagram.name}
+                      </div>
+                      <div className="mt-1 text-[11px] text-[#8C7A6B]">
+                        上{specifiedPreview.upperGua?.name} · 下{specifiedPreview.lowerGua?.name}
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-[#8C7A6B]">
+                      {specifiedMovingLines.length
+                        ? `${specifiedMovingLines.map(yaoPositionLabel).join("、")}动`
+                        : "静卦"}
+                    </div>
+                  </div>
+
+                  <div className="mx-auto flex max-w-[180px] flex-col gap-2">
+                    {specifiedPreview.lines
+                      .slice()
+                      .sort((a, b) => b.index - a.index)
+                      .map((line) => {
+                        const isYang = line.yinYang === "yang";
+                        const isMoving = specifiedMovingLines.includes(line.index);
+                        return (
+                          <div
+                            key={`specified-preview-${line.index}`}
+                            className="grid grid-cols-[36px_1fr_28px] items-center gap-2"
+                          >
+                            <span className="text-right text-[10px] text-[#a28f73]">
+                              {yaoPositionLabel(line.index)}
+                            </span>
+                            <div className="flex items-center justify-center">
+                              {isYang ? (
+                                <div
+                                  className={`h-[7px] w-full rounded-full ${
+                                    isMoving ? "bg-[#b2613c]" : "bg-[#5c4a38]"
+                                  }`}
+                                />
+                              ) : (
+                                <div className="flex w-full gap-4">
+                                  <div
+                                    className={`h-[7px] flex-1 rounded-full ${
+                                      isMoving ? "bg-[#b2613c]" : "bg-[#5c4a38]"
+                                    }`}
+                                  />
+                                  <div
+                                    className={`h-[7px] flex-1 rounded-full ${
+                                      isMoving ? "bg-[#b2613c]" : "bg-[#5c4a38]"
+                                    }`}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-[#b2613c]">
+                              {isMoving ? "动" : ""}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[12px] text-[#8C7A6B]">动爻</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSpecifiedMovingLines([]);
+                        setDiceSums([]);
+                      }}
+                      className="text-[11px] text-[#8C7A6B] underline underline-offset-4"
+                    >
+                      设为无动爻
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[1, 2, 3, 4, 5, 6].map((lineIndex) => {
+                      const active = specifiedMovingLines.includes(lineIndex);
+                      return (
+                        <button
+                          key={`moving-${lineIndex}`}
+                          type="button"
+                          onClick={() => {
+                            setSpecifiedMovingLines((prev) =>
+                              prev.includes(lineIndex)
+                                ? prev.filter((n) => n !== lineIndex)
+                                : [...prev, lineIndex].sort((a, b) => a - b)
+                            );
+                            setDiceSums([]);
+                          }}
+                          className={`rounded-full border px-3 py-2 text-[12px] transition-colors ${
+                            active
+                              ? "border-[#b08a57] bg-[#efe0c4] text-[#4b3423]"
+                              : "border-[#D7C6AA] bg-[#fffaf2]/50 text-[#8B6B3F] hover:bg-[#F0E4D1]"
+                          }`}
+                        >
+                          {yaoPositionLabel(lineIndex)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2 text-[11px] leading-relaxed text-[#a28f73]">
+                    可选一个或多个动爻；不选则按静卦处理。
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      const timestamp = resolveSelectedCastTimeISO();
+                      const r = deriveHexagramFromSpecified({
+                        upperNum: specifiedUpperNum,
+                        lowerNum: specifiedLowerNum,
+                        movingLines: specifiedMovingLines,
+                        timestamp,
+                      });
+                      setDiceSums(r.diceSums);
+                    } catch {
+                      setError("指定卦生成失败，请重试。");
+                    }
+                  }}
+                  className="ink-button-primary w-full px-5 py-2 text-sm"
+                >
+                  生成指定卦
+                </button>
+              </div>
+            </div>
+          )}
+
           {method === "manual" && (
-            <div className="rounded-[16px] border border-[#E5D8C7] bg-[#F8F3EA] p-4 text-[#3A2F26] shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-opacity duration-150">
+            <div className="ink-panel p-4 text-[#3A2F26] transition-opacity duration-150">
               <div className="text-center font-ritual-title text-[16px] font-semibold text-[#3A2F26]">
                 手动录入
               </div>
@@ -450,7 +724,7 @@ export default function DivinationPageClient() {
                   return (
                     <div
                       key={`manual-yao-${yaoIdx}`}
-                      className="rounded-[14px] border border-[#E5D8C7] bg-[#FBF5EB] px-3 py-2"
+                      className="ink-subpanel-muted px-3 py-2"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="text-[12px] font-medium text-[#8C7A6B]">{label}</div>
@@ -473,8 +747,8 @@ export default function DivinationPageClient() {
                                 }}
                                 className={`rounded-full px-3 py-1 text-[11px] border transition-colors ${
                                   v === "front"
-                                    ? "bg-[#C6A46C] border-[#C6A46C] text-[#fff9ee]"
-                                    : "bg-transparent border-[#D7C6AA] text-[#8B6B3F] hover:bg-[#F0E4D1]"
+                                    ? "border-[#b08a57] bg-[#efe0c4] text-[#4b3423]"
+                                    : "border-[#D7C6AA] bg-[#fffaf2]/50 text-[#8B6B3F] hover:bg-[#F0E4D1]"
                                 }`}
                               >
                                 正
@@ -488,8 +762,8 @@ export default function DivinationPageClient() {
                                 }}
                                 className={`rounded-full px-3 py-1 text-[11px] border transition-colors ${
                                   v === "back"
-                                    ? "bg-[#C6A46C] border-[#C6A46C] text-[#fff9ee]"
-                                    : "bg-transparent border-[#D7C6AA] text-[#8B6B3F] hover:bg-[#F0E4D1]"
+                                    ? "border-[#b08a57] bg-[#efe0c4] text-[#4b3423]"
+                                    : "border-[#D7C6AA] bg-[#fffaf2]/50 text-[#8B6B3F] hover:bg-[#F0E4D1]"
                                 }`}
                               >
                                 反
@@ -512,7 +786,7 @@ export default function DivinationPageClient() {
                       setDiceSums([]);
                       setError(null);
                     }}
-                    className="w-full rounded-[999px] border border-[#C89B5A] bg-transparent px-5 py-2 text-sm text-[#8B6B3F] hover:bg-[rgba(200,155,90,0.08)] transition-colors"
+                    className="ink-button-secondary w-full px-5 py-2 text-sm"
                   >
                     清空重填
                   </button>
@@ -523,13 +797,13 @@ export default function DivinationPageClient() {
                       try {
                         const complete = manualCoins.map((line) => line as any);
                         const dice = deriveHexagramFromManualLines(complete).diceSums;
+                        resolveSelectedCastTimeISO();
                         setDiceSums(dice);
-                        setCastTimeISO(new Date().toISOString());
                       } catch {
                         setError("手动录入生成失败，请重试。");
                       }
                     }}
-                    className="w-full rounded-[999px] bg-[#C6A46C] px-5 py-2 text-sm font-medium text-[#fff9ee] shadow-[0_6px_18px_rgba(198,164,108,0.22)] disabled:cursor-not-allowed disabled:bg-[#d5c3a4] hover:bg-[#B38B43] transition-colors"
+                    className="ink-button-primary w-full px-5 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-55"
                   >
                     生成此卦
                   </button>
@@ -540,7 +814,7 @@ export default function DivinationPageClient() {
         </section>
 
         {previewResult && (
-          <div className="mt-4 rounded-[16px] border border-[#E5D8C7] bg-[#F8F3EA] p-4 text-[#3A2F26]">
+          <div className="mt-4 ink-panel p-4 text-[#3A2F26]">
             <p className="mb-2 text-[12px] font-medium text-[#8C7A6B]">
               已成之象（自下而上）
             </p>
@@ -580,7 +854,7 @@ export default function DivinationPageClient() {
             type="button"
             disabled={!readyForAnalysis || submitting}
             onClick={handleGenerate}
-            className="flex w-full items-center justify-center rounded-full bg-[#C6A46C] px-4 py-3 text-sm font-medium text-[#fff9ee] shadow-[0_10px_26px_rgba(198,164,108,0.28)] disabled:cursor-not-allowed disabled:bg-[#d5c3a4]"
+            className="ink-button-primary flex w-full px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-55"
           >
             {submitting ? "先观应象中..." : "先观应象"}
           </button>

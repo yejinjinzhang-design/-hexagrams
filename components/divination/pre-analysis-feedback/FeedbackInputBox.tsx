@@ -28,7 +28,7 @@ export function FeedbackInputBox({
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled || maxUserTurnsReached}
           placeholder={placeholder}
-          className="w-full resize-none rounded-[10px] border border-[#D7C6AA] bg-[#FBF5EB] px-3 py-2 text-[11px] text-[#3A2F26] placeholder:text-[#B09A82] focus:border-[#C6A46C] focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full resize-none ink-input text-[11px] placeholder:text-[#B09A82] disabled:cursor-not-allowed disabled:opacity-60"
         />
       </div>
       <button
@@ -37,7 +37,7 @@ export function FeedbackInputBox({
         disabled={
           disabled || maxUserTurnsReached || !value.trim()
         }
-        className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-[#C6A46C] px-4 text-[11px] font-medium text-[#fff9ee] shadow-[0_4px_12px_rgba(198,164,108,0.25)] transition-colors hover:bg-[#B38B43] disabled:cursor-not-allowed disabled:bg-[#D5C3A4]"
+        className="ink-button-primary h-9 shrink-0 px-4 py-0 text-[11px] disabled:cursor-not-allowed disabled:opacity-55"
       >
         {submitLabel}
       </button>

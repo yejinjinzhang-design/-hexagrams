@@ -60,7 +60,7 @@ export function Dice({ disabled, onRollComplete }: DiceProps) {
       : "";
 
   return (
-    <div className="flex flex-col items-center gap-4 rounded-2xl border border-[#e0d2b8] bg-[#faf5ea]/95 p-4 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
+    <div className="ink-panel flex flex-col items-center gap-4 p-4">
       <div className="flex items-center justify-center gap-5">
         <Coin
           side={results[0]}

@@ -13,6 +13,16 @@ function lineInfo(line: YaoLineBoard): string {
   return `${line.liuQin}${line.stem}${line.branch}`;
 }
 
+function fuShenInfo(line: YaoLineBoard): string | null {
+  if (!line.fuShen) return null;
+  return `伏：${line.fuShen.liuQin}${line.fuShen.stem}${line.fuShen.branch}`;
+}
+
+function isKongBranch(branch: string | undefined, dayXunKong: string): boolean {
+  if (!branch || !dayXunKong) return false;
+  return dayXunKong.includes(branch);
+}
+
 /** 桌面 / 默认爻线 */
 function YaoShape({ yinYang }: { yinYang: "yin" | "yang" }) {
   if (yinYang === "yang") {
@@ -82,6 +92,21 @@ function ShiYingTag({
   );
 }
 
+function KongTag({ compact }: { compact?: boolean }) {
+  return (
+    <span
+      title="日空"
+      className={`inline-flex shrink-0 items-center rounded border border-[#b2613c]/35 bg-[#b2613c]/10 text-[#9a4d31] ${
+        compact
+          ? "px-[3px] py-px text-[8px] leading-none"
+          : "px-1 py-[1px] text-[9px] md:px-1.5 md:text-[10px]"
+      }`}
+    >
+      空
+    </span>
+  );
+}
+
 interface Props {
   board: LiuyaoBoard;
   user: UserQuestionInput;
@@ -103,7 +128,7 @@ export function TraditionalHexagramLayout({ board, user }: Props) {
     user.gender === "male" ? "男" : user.gender === "female" ? "女" : "未说明";
 
   return (
-    <section className="mx-auto w-full max-w-[1120px] min-w-0 overflow-hidden rounded-[16px] border border-[#E5D8C7] bg-[#F8F3EA] px-3 py-4 text-[#3A2F26] md:px-6 md:py-4 md:mx-auto">
+    <section className="mx-auto w-full max-w-[1120px] min-w-0 overflow-hidden ink-panel px-3 py-4 text-[#3A2F26] md:px-6 md:py-4 md:mx-auto">
       {/* 盘头信息 */}
       <div className="mb-3 min-w-0 space-y-1 text-left md:mb-4">
         <p className="break-words text-[15px] font-semibold font-ritual-title leading-relaxed text-[#3A2F26] md:text-[18px]">
@@ -112,7 +137,7 @@ export function TraditionalHexagramLayout({ board, user }: Props) {
         <p className="break-words text-[11px] leading-relaxed font-ritual-title text-[#8C7A6B] md:text-[13px]">
           问卦者：{user.birthYear} 年生 {genderLabel}　起卦时：{meta.solarDate}
           　四柱：{meta.yearPillar} {meta.monthPillar} {meta.dayPillar}{" "}
-          {meta.hourPillar}
+          {meta.hourPillar}　日空：{meta.dayXunKong}
         </p>
       </div>
 
@@ -153,7 +178,7 @@ export function TraditionalHexagramLayout({ board, user }: Props) {
 
       {/* 手机端：同一主卡片内左右双列（本卦左、变卦右），窄屏仅卡片内横向微滚 */}
       <div className="min-w-0 md:hidden">
-        <div className="overflow-hidden rounded-xl border border-[#D9C4A8] bg-[#FAF4EA] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
+        <div className="ink-subpanel overflow-hidden">
           <div className="touch-pan-x overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
             <div className="flex w-full min-w-[300px] flex-row flex-nowrap items-stretch px-1 pb-2 pt-2">
               {/* 本卦列：标签 → 卦名 → 爻（纵向仅在本列内） */}
@@ -172,6 +197,12 @@ export function TraditionalHexagramLayout({ board, user }: Props) {
                     const yinYangBen: "yin" | "yang" =
                       benBit === "1" ? "yang" : "yin";
                     const isMoving = benLine.moving;
+                    const fuShen = fuShenInfo(benLine);
+                    const isBenKong = isKongBranch(benLine.branch, meta.dayXunKong);
+                    const isFuShenKong = isKongBranch(
+                      benLine.fuShen?.branch,
+                      meta.dayXunKong
+                    );
                     return (
                       <div
                         key={`m-ben-${benLine.index}`}
@@ -181,7 +212,20 @@ export function TraditionalHexagramLayout({ board, user }: Props) {
                           {benLine.sixGod}
                         </div>
                         <div className="min-w-0 break-all text-right text-[9px] leading-tight text-[#4a3a2a]">
-                          {lineInfo(benLine)}
+                          <div className="flex max-w-full flex-wrap items-center justify-end gap-0.5">
+                            <span className="min-w-0 break-all">
+                              {lineInfo(benLine)}
+                            </span>
+                            {isBenKong ? <KongTag compact /> : null}
+                          </div>
+                          {fuShen ? (
+                            <div className="mt-0.5 flex max-w-full flex-wrap items-center justify-end gap-0.5 text-[8px] leading-tight text-[#9a8468]">
+                              <span className="min-w-0 break-all">
+                                {fuShen}
+                              </span>
+                              {isFuShenKong ? <KongTag compact /> : null}
+                            </div>
+                          ) : null}
                         </div>
                         <div className="flex shrink-0 justify-center">
                           <YaoShapeCompact yinYang={yinYangBen} />
@@ -226,6 +270,10 @@ export function TraditionalHexagramLayout({ board, user }: Props) {
                               ? "yang"
                               : "yin"
                             : null;
+                        const isBianKong = isKongBranch(
+                          bianLine?.branch,
+                          meta.dayXunKong
+                        );
                         return (
                           <div
                             key={`m-bian-${benLine.index}`}
@@ -239,7 +287,16 @@ export function TraditionalHexagramLayout({ board, user }: Props) {
                               )}
                             </div>
                             <div className="min-w-0 break-all text-left text-[9px] leading-tight text-[#6b5235]">
-                              {bianLine ? lineInfo(bianLine) : ""}
+                              {bianLine ? (
+                                <div className="inline-flex max-w-full items-center gap-0.5">
+                                  <span className="min-w-0 break-all">
+                                    {lineInfo(bianLine)}
+                                  </span>
+                                  {isBianKong ? <KongTag compact /> : null}
+                                </div>
+                              ) : (
+                                ""
+                              )}
                             </div>
                           </div>
                         );
@@ -267,6 +324,12 @@ export function TraditionalHexagramLayout({ board, user }: Props) {
               const benBit = bitForIndex(benGua.binary, benLine.index);
               const yinYangBen: "yin" | "yang" = benBit === "1" ? "yang" : "yin";
               const isMoving = benLine.moving;
+              const fuShen = fuShenInfo(benLine);
+              const isBenKong = isKongBranch(benLine.branch, meta.dayXunKong);
+              const isFuShenKong = isKongBranch(
+                benLine.fuShen?.branch,
+                meta.dayXunKong
+              );
               const bianLine =
                 hasBian && bianGua ? bianLineByIndex.get(benLine.index) ?? null : null;
               const yinYangBian: "yin" | "yang" | null =
@@ -275,11 +338,12 @@ export function TraditionalHexagramLayout({ board, user }: Props) {
                     ? "yang"
                     : "yin"
                   : null;
+              const isBianKong = isKongBranch(bianLine?.branch, meta.dayXunKong);
 
               return (
                 <div
                   key={benLine.index}
-                  className="grid h-9 min-w-0 items-center"
+                  className="grid min-h-9 min-w-0 items-center py-0.5"
                   style={{
                     gridTemplateColumns:
                       "80px 140px 80px 24px 40px 1px 80px 140px 80px",
@@ -289,7 +353,18 @@ export function TraditionalHexagramLayout({ board, user }: Props) {
                     {benLine.sixGod}
                   </div>
                   <div className="min-w-0 pr-2 text-right text-[12px] text-[#4a3a2a]">
-                    {lineInfo(benLine)}
+                    <div className="flex max-w-full flex-wrap items-center justify-end gap-1">
+                      <span className="min-w-0 break-all">
+                        {lineInfo(benLine)}
+                      </span>
+                      {isBenKong ? <KongTag /> : null}
+                    </div>
+                    {fuShen ? (
+                      <div className="mt-0.5 flex max-w-full flex-wrap items-center justify-end gap-1 text-[10px] leading-tight text-[#9a8468]">
+                        <span className="min-w-0 break-all">{fuShen}</span>
+                        {isFuShenKong ? <KongTag /> : null}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex items-center justify-center">
                     <YaoShape yinYang={yinYangBen} />
@@ -309,7 +384,14 @@ export function TraditionalHexagramLayout({ board, user }: Props) {
                     )}
                   </div>
                   <div className="min-w-0 pl-2 text-left text-[12px] text-[#6b5235]">
-                    {bianLine ? lineInfo(bianLine) : ""}
+                    {bianLine ? (
+                      <div className="inline-flex max-w-full items-center gap-1">
+                        <span className="min-w-0 break-all">{lineInfo(bianLine)}</span>
+                        {isBianKong ? <KongTag /> : null}
+                      </div>
+                    ) : (
+                      ""
+                    )}
                   </div>
                   <div />
                 </div>

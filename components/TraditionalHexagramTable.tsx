@@ -101,7 +101,7 @@ export function TraditionalHexagramTable({
     : null;
 
   return (
-    <section className="rounded-2xl border border-[#e0d2b8] bg-[#faf5ea]/95 overflow-hidden text-[#4a3a2a]">
+    <section className="ink-panel overflow-hidden text-[#4a3a2a]">
       {/* 顶部：卦主、问事、时间与四柱 */}
       <header className="border-b border-[#e0d2b8] bg-[#f7f1e4] px-4 py-3">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs">

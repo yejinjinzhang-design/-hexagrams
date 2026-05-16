@@ -62,7 +62,7 @@ export default function ResultPageClient() {
         <button
           type="button"
           onClick={() => router.push("/")}
-          className="rounded-full border border-[#E5D8C7] bg-[#F8F3EA] px-4 py-2 text-sm text-[#3A2F26]"
+          className="ink-button-secondary px-4 py-2 text-sm"
         >
           返回首页重新开始
         </button>

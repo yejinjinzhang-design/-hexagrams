@@ -110,6 +110,7 @@ const METHOD_LABELS: Record<string, string> = {
   solarDate: "时间卦（阳历）",
   number: "数字起卦",
   manual: "手动录入",
+  specified: "指定卦",
 };
 
 export function computeMethodDistribution(
@@ -133,7 +134,7 @@ export function computeMethodDistribution(
     counts[method] = (counts[method] ?? 0) + 1;
   }
 
-  const keys = ["coin", "lunarDate", "solarDate", "number", "manual", "unknown"];
+  const keys = ["coin", "lunarDate", "solarDate", "number", "manual", "specified", "unknown"];
   return keys.map((method) => ({
     method,
     label: METHOD_LABELS[method] ?? method,

@@ -12,20 +12,17 @@ import {
   parsePrecheckStructuredContent,
 } from "@/lib/divination/precheck-structured";
 import type { YaoLineBoard } from "@/types/liuyao-board";
-import type { PreCheckStructuredResult } from "@/lib/storage/types";
+import type {
+  DivinationPipelineTrace,
+  PreCheckStructuredResult,
+} from "@/lib/storage/types";
+import { buildBoardFactSheet } from "@/lib/analysis/board-facts";
+import { orchestratePrecheckLlm } from "@/lib/analysis/orchestrator";
+import { LIUYAO_READING_ORDER_GUIDE } from "@/lib/analysis/prompts";
+import { isDeepseekConfigured } from "@/lib/llm/deepseek";
+import { isGeminiConfigured } from "@/lib/llm/gemini";
 
 export const runtime = "nodejs";
-
-const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
-
-function getApiKey(): string {
-  const key = process.env.DEEPSEEK_API_KEY;
-  if (!key) {
-    console.error("[precheck] Missing DeepSeek API Key (DEEPSEEK_API_KEY)");
-    throw new Error("DEEPSEEK_API_KEY 未配置，请在 .env.local 中设置");
-  }
-  return key;
-}
 
 export async function POST(request: Request) {
   try {
@@ -55,6 +52,10 @@ export async function POST(request: Request) {
 
     const { userInput, board } = session;
     const { benGua, bianGua, meta } = board;
+    const movingLines = session.divination.movingLines;
+    const boardFacts = buildBoardFactSheet(board, movingLines);
+    const isKongBranch = (branch: string | undefined) =>
+      Boolean(branch && meta.dayXunKong.includes(branch));
 
     const lineToText = (line: YaoLineBoard) => {
       const parts: string[] = [];
@@ -65,9 +66,12 @@ export async function POST(request: Request) {
       if (line.shiYing === "世") parts.push("为世");
       if (line.shiYing === "应") parts.push("为应");
       if (line.moving) parts.push("发动");
+      if (isKongBranch(line.branch)) parts.push(`日空：${line.branch}空`);
       if (line.fuShen) {
         parts.push(
-          `伏神：${line.fuShen.liuQin}${line.fuShen.stem}${line.fuShen.branch}${line.fuShen.fiveElement}`
+          `伏神：${line.fuShen.liuQin}${line.fuShen.stem}${line.fuShen.branch}${line.fuShen.fiveElement}${
+            isKongBranch(line.fuShen.branch) ? `（${line.fuShen.branch}空）` : ""
+          }`
         );
       }
       return parts.join("，");
@@ -78,30 +82,30 @@ export async function POST(request: Request) {
       .map(lineToText)
       .join("\n");
 
-    const movingLines = session.divination.movingLines;
-
     const questionProfile = classifyPrecheckQuestion(userInput.question);
     const profileBlock = formatPrecheckProfileForPrompt(questionProfile);
 
     const system = `
 你是一位精通六爻断卦的老师傅。
-你当前的任务不是泛泛解释卦象，而是先围绕用户所问之事，尽可能验证已经发生的具体前情。
-请优先输出用户可以核对的内容，例如时间段、已发生的事件、当前所处阶段、导致局面如此的主要原因（指出更像哪一类，而非只说「有阻碍」）。
+你当前的任务不是泛泛解释卦象，也不是强行让卦去回答用户原问；而是先把这张卦本身读懂，再判断它与用户所问是否相应。
+请优先输出用户可以核对的内容，例如时间段、已发生的事件、当前所处阶段、导致局面如此的主要原因、心态与隐情状态（指出更像哪一类，而非只说「有阻碍」）。
 避免使用空泛、抽象、谁都适用的表述。除非必要，不要写「并非凭空起念」「酝酿已久」「投入心力」「并不是突然」「心中焦虑反复」「推进与等待并存」这类无效套话。
-你的验证必须让用户能判断哪些说中了、哪些需要修正；宁可具体而偶需修正，也不要整段无法对证的空话。
+你的验证必须让用户能判断哪些说中了、哪些需要修正；宁可具体而偶需修正，也不要整段无法对证的空话。若卦象主轴不直接回应原问题，也要如实指出卦更像在显什么状态。
 
 ${PRECHECK_VAGUE_PHRASING_BAN}
 
 【生成原则】
-优先具体，后讲抽象；优先验证事件与节点，后讲情绪与氛围；优先围绕用户所问之事本身，不要离题讲泛状态。
-每一个「状态」判断，尽量用可观察情境落地（例如已投递、已面谈、已延期一次、对方已读不回等），再用卦爻收束依据。
+优先具体，后讲抽象；优先读卦中最强的世应动、六亲、六神状态，再判断它能否回扣用户所问；不要为了贴题而忽略卦中明显的心虚、隐情、拖延、口舌、旧事牵连、压力冲突等状态。
+每一个「状态」判断，都要尽量用可观察情境落地（例如已投递、已面谈、已延期一次、对方已读不回、口头说法与实际凭据不一致、心里有虚处怕被追问等），再用卦爻收束依据。
+
+${LIUYAO_READING_ORDER_GUIDE}
 
 【核心目标】
-最值得先核对的是：与「用户原问题」同一主题下，已经发生了什么、大致从何时起变得关键、当下卡在哪一类环节。
-包括可核验的时间感、阶段感、诱因类别、已采取或未落地的行动——均须尽量贴着问题，而非泛泛论卦气。
+最值得先核对的是：这张卦最明显在显什么。它可能正面回应「用户原问题」，也可能先显出问卦者/对方/环境中的另一层状态，如心虚、隐情、怕被追问、文书凭据不足、口舌消息、旧事拖住、压力冲突等。
+包括可核验的时间感、阶段感、诱因类别、已采取或未落地的行动、心理与隐情状态——能贴着问题就贴着问题说；若不完全贴题，应说明卦象更像先说哪一层。
 
 【重要约束】
-只根据当前这张卦象与用户所问的问题来判断，不可脱离卦象空谈；
+只根据当前这张卦象与用户所问的问题来判断，不可脱离卦象空谈；但不可为了迎合问题而扭曲卦象，卦不直答所问时须如实说明；
 不允许预测最终结果，不下「成/不成」之断语；
 每一则推验须能指回卦中具体爻象（世应、动爻、六亲、六神、日月对用神等），但表述上要以「可核对的前情」为主干；
 语气留有余地，勿说满、勿武断具体日期或铁口直断。
@@ -114,9 +118,9 @@ ${PRECHECK_VAGUE_PHRASING_BAN}
 ${LEAD_LAYER_PROSE_STYLE_BLOCK}
 
 【三层分工（必须严格遵守）】
-1）plainValidationSummary（页首第一折，页面上标题为「先观其应」——前情总览，非一句话摘要）：此层须为一至两段、信息密度明显偏高的总览，使用户不读后文亦能把握前情大意七八成；文风必须严格遵守上文【第一折书面语体】：中短句、一句一义、勿超长复句黏连。优先从整卦层面用人事语汇写出：本卦整体气质、卦名与取象在所问之事上的意味、有无变卦时前情已如何转向或蓄势——不必先拆到某一爻，亦禁止出现世、应、动爻、生克、父母、官鬼、子孙、兄弟等术数专名及干支组合。须自然融贯下列维度之多者（语气连贯即可，勿列「其一其二」，勿写总结如下式条目）：①此事此前整体已推进到何地步、当下真实处境约如何；②更似起念、筹备、推进、搁置、等待、反复或临门未定等哪一阶，须具体；③时间节奏（已历多久、近段有无动静、卡点更像补件、流程、对方迟滞、内部协调、标准牵制等哪一类）；④途中更可能出现的具体情节，勿只云「有碍」；⑤内因与外缘何者偏显；⑥为何会问到眼下这一步。全文汉字宜在三百二十字以上，至少两段、每段内仍须断句清楚；末句谦请对方酌合所历，暗示若相应再论其后（仍勿对最终结果下死断、勿展开未来详断）。
-2）reasoningExplanation（对应「再明其理」）：承上一层所陈，解释卦中何以映出此等局面；仍以清楚现代书面语为主，可间用爻象名目，但每出一词须随接一两句人能听懂的话，勿仿古文连缀。本层须有承转，篇幅不宜单薄，宜在约一百六十汉字以上，勿作名词堆砌。
-3）technicalInterpretation（对应「细参卦旨」）：缕析术数依据，可直言动爻、世应、月建、日辰、化象、五行生克等。须分节书之：每节以四字或五字内简短小题为引（勿生僻）；小节题目须依本卦与所问灵活酌定，可从「卦象大意」「卦名取象」「本变之机」「世应与人事」「动爻与变机」「时机与节候」「阻碍与外援」等中择要而书，不必套用固定顺序，亦不必节节课写全；正文仍以说清楚为主，勿仿古文评注体。题后换行再述，节与节之间宜空一行；全层宜在约二百字以上，务求条畅，勿并为一整块密文。
+1）plainValidationSummary（页首第一折，页面上标题为「先观其应」——前情总览，非一句话摘要）：此层须为一至两段、信息密度明显偏高的总览，使用户不读后文亦能把握前情大意七八成；文风必须严格遵守上文【第一折书面语体】：中短句、一句一义、勿超长复句黏连。底层判断必须先来自世、应、动爻的作用关系，再翻译成普通人事语汇；此层禁止出现世、应、动爻、生克、父母、官鬼、子孙、兄弟等术数专名及干支组合，但不可脱离这些爻象只谈卦名气氛。须自然融贯下列维度之多者（语气连贯即可，勿列「其一其二」，勿写总结如下式条目）：①卦中最明显的状态或隐情是什么，是否直接回应原问题；②此事此前整体已推进到何地步、当下真实处境约如何；③更似起念、筹备、推进、搁置、等待、反复、心虚遮掩或临门未定等哪一阶，须具体；④时间节奏与卡点类别；⑤途中更可能出现的具体情节，勿只云「有碍」；⑥内因与外缘何者偏显；⑦为何会问到眼下这一步。全文汉字宜在三百二十字以上，至少两段、每段内仍须断句清楚；末句谦请对方酌合所历，暗示若相应再论其后（仍勿对最终结果下死断、勿展开未来详断）。
+2）reasoningExplanation（对应「再明其理」）：承上一层所陈，解释卦中何以映出此等局面；必须先说明世、应、动爻各代表哪一方/哪类事，以及它们的生克冲合、动化或空伏如何构成当前前情。随后再用六亲与六神/六兽解释状态，例如某六神临世应或动爻为何表现为迟滞、疑惧、口舌、隐情、压力或体面资源。本层须有承转，篇幅不宜单薄，宜在约一百六十汉字以上，勿作名词堆砌。
+3）technicalInterpretation（对应「细参卦旨」）：缕析术数依据，须优先直言世应、动爻、六亲作用、六神状态、月建日辰、化象与五行生克。须分节书之：每节以四字或五字内简短小题为引（勿生僻）；小节题目须依本卦与所问灵活酌定，可从「世应动机」「六亲作用」「六神状态」「本变之机」「时机与节候」「阻碍与外援」等中择要而书，至少一节要正面解释世应动爻关系；正文仍以说清楚为主，勿仿古文评注体。题后换行再述，节与节之间宜空一行；全层宜在约二百字以上，务求条畅，勿并为一整块密文。
 
 【输出格式硬性要求（极其重要）】
 你必须只输出一个 JSON 对象，不要 markdown 代码围栏，不要前后解释语。
@@ -130,6 +134,8 @@ plainValidationSummary、reasoningExplanation、technicalInterpretation
 ${userInput.question}
 
 ${profileBlock}
+
+${boardFacts}
 
 【基础信息】
 - 出生年份：${userInput.birthYear}
@@ -153,18 +159,20 @@ ${profileBlock}
 ${benLines}
 
 【卦象运用方式】
-读卦须支撑「可核对的前情」，而非堆砌术语。切入顺序不必固定：若大象或卦名已足照见处境，可先从此落笔；若本变对比最显前因后果，可由此说起；若世应最关人我，可侧重人事；若动爻最显近日变化，亦可从变机入手。世应、动爻、月日、六亲、六神、五行生克等，择与本卦及用户之问最相干涉者用之，融入各层叙述，勿向用户逐条宣读 checklist。
+读卦须支撑「可核对的前情」，而非堆砌术语。必须先从世爻、应爻、动爻的作用关系判断此事在讲什么，再用六亲生克翻译成人事含义，最后看六神/六兽临何爻以定状态与表现。卦名、本变、月日可辅助收束，但不可取代世应动这个主轴。相关判断须融入各层叙述，勿向用户逐条宣读 checklist。
 
 【第一折专嘱（plainValidationSummary）】
-此折不是总论一句带过，而是「先观其应」式的前情总览：先整卦取意、再落到与用户所问最相干之关节，篇幅与信息须明显厚于旧版短文；并须完全遵守【第一折书面语体】，以普通用户能顺畅读完为先。
+此折不是总论一句带过，而是「先观其应」式的前情总览：先把世应动的作用关系转成人事主轴，再落到与用户所问最相干之关节；可用卦名与本变辅助成文，但不能以整卦气氛代替爻象判断。篇幅与信息须明显厚于旧版短文；并须完全遵守【第一折书面语体】，以普通用户能顺畅读完为先。
 
 【生成步骤（内化执行，勿向用户展示步骤名）】
-Step 1：从用户原话中把握核心主题（与所问完全同一件事）。
-Step 2：对照上文「本类问题优先核验的前情维度」与「可核验输出要求」，选出最该让用户先对号入座的若干条作为叙述主轴。
-Step 3：用卦象支撑每一条具体前情推验；禁止用「已有酝酿」「非初念」等空句代替 Step 3。
+Step 1：从用户原话中把握核心主题，但不要预设卦一定正面回答此主题。
+Step 2：先查世、应、动爻各临何六亲、六神，彼此是否生克冲合刑害，动化后是否回头生克、化进退、入空伏藏。
+Step 3：由这些作用关系先判断「这张卦在讲什么」，包括可能不完全围绕原问题的状态；再对照上文「本类问题优先核验的前情维度」与「可核验输出要求」，选出最该让用户先对号入座的若干条作为叙述主轴。
+Step 4：用卦象支撑每一条具体前情推验；禁止用「已有酝酿」「非初念」等空句代替爻象依据。
 
 【验收标准（生成前自检，勿输出自检文字）】
-正文中须能找出：至少一则较具体的时间或阶段判断；至少一则较具体的诱因或卡点类别判断；至少一则与用户原问题高度相关的已发生事实推测。
+须先完成核卦：卦名、变卦、动爻、世应、六亲干支、伏神、空亡必须与「核卦清单」一致。
+正文中须能找出：至少一则较具体的时间或阶段判断；至少一则较具体的诱因或卡点类别判断；至少一则卦中明显状态的细读（如心虚、隐情、口舌、拖滞、压力、文书凭据等）。若与用户原问题高度相关，要明确回扣；若不完全相关，要说明卦象更像先显何事。
 若删去所有卦爻术语后，仍有一半以上内容对任何求测者都成立，则视为不合格，须改写得更贴题、更具体。
 
 【表达方式要求】
@@ -174,7 +182,7 @@ Step 3：用卦象支撑每一条具体前情推验；禁止用「已有酝酿�
 不要预测最终结果，不要说「一定能成 / 一定不成」；
 不要提前给出完整的未来走势分析；
 不要以心理描写或泛状态句作为段落主体；
-不要脱离用户原问题只复述卦名卦象；
+不要只复述卦名卦象；也不要为了贴用户原问题而忽略卦中更明显的状态；
 不要在 plainValidationSummary 里写术数专名；
 禁止使用「大白话」「白话」「口语版」「专业版」「术数版」「点击展开」等露骨分层用语。
 
@@ -182,17 +190,6 @@ Step 3：用卦象支撑每一条具体前情推验；禁止用「已有酝酿�
 只输出上述 JSON 对象这一行（或可读的紧凑 JSON），不要其它字符。
 三个字段都不得为空字符串，且须满足上文对各层最低篇幅之要求；宁可稍长而气脉完足，勿三言两语草草收场。
 `.trim();
-
-    const deepseekBody = {
-      model: "deepseek-chat",
-      messages: [
-        { role: "system" as const, content: system },
-        { role: "user" as const, content: userPrompt },
-      ],
-      ...(process.env.DEEPSEEK_JSON_MODE === "1"
-        ? { response_format: { type: "json_object" as const } }
-        : {}),
-    };
 
     const divinationDataForLog = {
       precheckQuestionKind: questionProfile.kind,
@@ -217,84 +214,35 @@ Step 3：用卦象支撑每一条具体前情推验；禁止用「已有酝酿�
     console.log("==== USER PROMPT ====");
     console.log(userPrompt);
 
+    if (!isDeepseekConfigured() && !isGeminiConfigured()) {
+      return NextResponse.json({
+        text: "前事验证服务未配置，请联系管理员配置 DEEPSEEK_API_KEY 或 GEMINI_API_KEY。",
+      });
+    }
+
     let text = "";
+    let auditSummary: string | undefined;
+    let pipelineTrace: DivinationPipelineTrace | undefined;
 
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45_000);
-
-      console.log("PRECHECK DeepSeek URL:", DEEPSEEK_URL);
-      console.log("PRECHECK DeepSeek model:", deepseekBody.model);
-      console.log(
-        "PRECHECK DeepSeek messages length:",
-        deepseekBody.messages.length
-      );
-
-      const res = await fetch(DEEPSEEK_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getApiKey()}`,
-        },
-        body: JSON.stringify(deepseekBody),
-        signal: controller.signal,
+      const out = await orchestratePrecheckLlm({
+        system,
+        user: userPrompt,
+        userQuestion: userInput.question,
+        boardFacts,
       });
-
-      clearTimeout(timeout);
-
-      const raw = await res.text();
-
-      console.log("==== PRECHECK RAW RESPONSE ====");
-      console.log(raw);
-
-      if (!res.ok) {
-        console.error(
-          "[precheck] DeepSeek HTTP error:",
-          res.status,
-          res.statusText,
-          raw
-        );
-        return NextResponse.json({
-          text: "前事验证服务暂时不可用，请稍后重试。",
-        });
-      }
-
-      let parsed: any;
-      try {
-        parsed = JSON.parse(raw);
-      } catch (e) {
-        console.error("[precheck] Failed to parse DeepSeek JSON:", e);
-        return NextResponse.json({
-          text: "前事验证返回异常，请稍后重试。",
-        });
-      }
-
-      console.log("==== PRECHECK PARSED RESPONSE ====");
-      console.log(JSON.stringify(parsed, null, 2));
-
-      if (
-        !parsed ||
-        !Array.isArray(parsed.choices) ||
-        !parsed.choices[0] ||
-        !parsed.choices[0].message ||
-        typeof parsed.choices[0].message.content !== "string"
-      ) {
-        console.error("DeepSeek response invalid:", parsed);
-        return NextResponse.json({
-          text: "前事验证未返回有效内容，请稍后重试。",
-        });
-      }
-
-      text = parsed.choices[0].message.content.trim();
-    } catch (error) {
-      console.error("DeepSeek ERROR:", error);
+      text = out.content.trim();
+      auditSummary = out.auditSummary?.trim() || undefined;
+      pipelineTrace = out.pipelineTrace;
+    } catch (e) {
+      console.error("[precheck] orchestrator error:", e);
       return NextResponse.json({
-        text: "接口调用失败，请查看后端日志",
+        text: "前事验证服务暂时不可用，请稍后重试。",
       });
     }
 
     if (!text) {
-      console.error("[precheck] empty text from DeepSeek");
+      console.error("[precheck] empty text from orchestrator");
       return NextResponse.json({
         text: "前事验证未返回有效内容，请稍后重试。",
       });
@@ -311,7 +259,19 @@ Step 3：用卦象支撑每一条具体前情推验；禁止用「已有酝酿�
     await updateSession(sessionId, {
       preCheckResult: structured,
       preCheckResultText: flatForAnalysis,
+      ...(auditSummary ? { preCheckAuditSummary: auditSummary } : {}),
+      ...(pipelineTrace?.steps?.length
+        ? { preCheckPipelineTrace: pipelineTrace }
+        : {}),
     });
+
+    if (process.env.LOG_MULTIMODEL_DETAIL === "1") {
+      console.info(
+        "[pipeline-trace] precheck session=",
+        sessionId,
+        JSON.stringify({ auditSummary, pipelineTrace }, null, 2)
+      );
+    }
 
     return NextResponse.json({
       preCheck: structured,

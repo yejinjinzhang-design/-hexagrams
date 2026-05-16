@@ -4,6 +4,10 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics/client";
 import type { PostAnalysisStructuredResult } from "@/lib/storage/types";
+import {
+  finalizePostAnalysisResult,
+  parsePostAnalysisStructuredContent,
+} from "@/lib/divination/analysis-structured";
 import { FollowUpChatSection } from "./FollowUpChatSection";
 
 interface AnalysisPageProps {
@@ -25,10 +29,8 @@ function LayerBlock({
 }) {
   return (
     <div
-      className={`rounded-md border px-3 py-3 md:px-4 md:py-3.5 ${
-        emphasis
-          ? "border-[#D4C4A8] bg-[#faf6ee] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]"
-          : "border-[#E5D8C7]/80 bg-[#f7efe0]/90"
+      className={`ink-subpanel px-3 py-3 md:px-4 md:py-3.5 ${
+        emphasis ? "shadow-[0_8px_22px_rgba(66,49,34,0.04)]" : "ink-subpanel-muted"
       } ${lead ? "md:py-4" : ""}`}
     >
       <h3 className="font-ritual-title text-[12px] font-medium tracking-[0.12em] text-[#5c3a2a] md:text-[13px]">
@@ -77,15 +79,21 @@ export function AnalysisPage({ sessionId }: AnalysisPageProps) {
         };
         if (cancelled) return;
         if (data.analysis) {
-          setAnalysis(data.analysis);
+          const reparsed = parsePostAnalysisStructuredContent(
+            data.analysis.summaryText
+          );
+          setAnalysis(
+            reparsed
+              ? finalizePostAnalysisResult(reparsed, data.analysis.summaryText)
+              : data.analysis
+          );
         } else if (data.text?.trim()) {
-          setAnalysis({
-            summaryTitle: "先陈其势",
-            summaryText: data.text.trim(),
-            reasoningTitle: "再释其由",
-            reasoningText: "",
-            detailedSections: [],
-          });
+          setAnalysis(
+            finalizePostAnalysisResult(
+              parsePostAnalysisStructuredContent(data.text),
+              data.text.trim()
+            )
+          );
         } else {
           setAnalysis(null);
         }
@@ -172,7 +180,7 @@ export function AnalysisPage({ sessionId }: AnalysisPageProps) {
         ) : null}
 
         {detailedSections.length > 0 ? (
-          <div className="rounded-md border border-[#D4C4A8]/90 bg-[#f4ead8]/80 px-3 py-3 md:px-4 md:py-3.5">
+          <div className="ink-subpanel px-3 py-3 md:px-4 md:py-3.5">
             <h3 className="font-ritual-title text-[12px] font-medium tracking-[0.12em] text-[#5c3a2a] md:text-[13px]">
               细参卦旨
             </h3>
@@ -183,7 +191,7 @@ export function AnalysisPage({ sessionId }: AnalysisPageProps) {
               {detailedSections.map((sec, idx) => (
                 <div
                   key={`${sec.title}-${idx}`}
-                  className="rounded-md border border-[#E5D8C7]/70 bg-[#faf6ee]/90 px-3 py-2.5 md:px-3.5 md:py-3"
+                  className="ink-subpanel-muted px-3 py-2.5 md:px-3.5 md:py-3"
                 >
                   <h4 className="font-ritual-title text-[11px] font-medium tracking-[0.1em] text-[#6b5235] md:text-[12px]">
                     {sec.title}
@@ -202,8 +210,8 @@ export function AnalysisPage({ sessionId }: AnalysisPageProps) {
 
   return (
     <>
-      <section className="w-full max-w-[1120px] rounded-[16px] border border-[#E5D8C7] bg-[#F8F3EA] p-4 text-xs text-[#3A2F26] md:mx-auto md:p-5">
-        <div className="flex flex-col gap-0.5 border-b border-[#E5D8C7]/60 pb-3">
+      <section className="ink-panel w-full max-w-[1120px] p-4 text-xs text-[#3A2F26] md:mx-auto md:p-5">
+        <div className="flex flex-col gap-0.5 border-b border-[#E5D8C7]/45 pb-3">
           <h2 className="font-ritual-title text-sm font-medium tracking-[0.2em] text-[#5c3a2a] md:text-[15px]">
             再断其后
           </h2>
@@ -212,7 +220,9 @@ export function AnalysisPage({ sessionId }: AnalysisPageProps) {
           </p>
         </div>
 
-        <div className="mt-4 space-y-3">{body}</div>
+        <div className="mt-4 space-y-3">
+          {body}
+        </div>
       </section>
 
       <div className="mt-6">

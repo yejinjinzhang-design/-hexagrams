@@ -101,7 +101,7 @@ export function FollowUpChatSection({ sessionId }: FollowUpChatSectionProps) {
   };
 
   return (
-    <section className="w-full max-w-[1120px] rounded-[16px] border border-[#E5D8C7] bg-[#F4ECDF] p-4 text-xs text-[#3A2F26] md:mx-auto md:p-5">
+    <section className="w-full max-w-[1120px] ink-panel p-4 text-xs text-[#3A2F26] md:mx-auto md:p-5">
       <header className="mb-3 border-b border-[#E2D3BF] pb-2">
         <h2 className="font-ritual-title text-sm font-medium tracking-[0.2em] text-[#5c3a2a] md:text-[15px]">
           卦后追问
@@ -118,7 +118,7 @@ export function FollowUpChatSection({ sessionId }: FollowUpChatSectionProps) {
             key={q}
             type="button"
             onClick={() => handleChipClick(q)}
-            className="rounded-full border border-[#D7C6AA] bg-[#F8F1E4] px-3 py-1 text-[11px] text-[#7a6751] hover:bg-[#F0E4D1] transition-colors"
+            className="rounded-full border border-[#D7C6AA]/80 bg-[#fffaf2]/55 px-3 py-1 text-[11px] text-[#7a6751] transition-colors hover:bg-[#F0E4D1]"
           >
             {q}
           </button>
@@ -126,7 +126,7 @@ export function FollowUpChatSection({ sessionId }: FollowUpChatSectionProps) {
       </div>
 
       {/* 消息列表 */}
-      <div className="mb-3 max-h-64 space-y-2 overflow-y-auto rounded-[12px] bg-[#F9F3E6] px-3 py-2">
+      <div className="ink-subpanel-muted mb-3 max-h-64 space-y-2 overflow-y-auto px-3 py-2">
         {messages.map((m) => (
           <div
             key={m.id}
@@ -137,8 +137,8 @@ export function FollowUpChatSection({ sessionId }: FollowUpChatSectionProps) {
             <div
               className={`max-w-[80%] rounded-[10px] px-3 py-2 text-[11px] leading-relaxed ${
                 m.role === "user"
-                  ? "bg-[#E8D9BF] text-[#3A2F26]"
-                  : "bg-[#FDF8ED] text-[#4A3827]"
+                  ? "bg-[#e8d7b7] text-[#3A2F26]"
+                  : "bg-[#fffaf2] text-[#4A3827]"
               }`}
             >
               {m.content}
@@ -155,14 +155,14 @@ export function FollowUpChatSection({ sessionId }: FollowUpChatSectionProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="对此卦还有何疑问？"
-            className="w-full resize-none rounded-[10px] border border-[#D7C6AA] bg-[#FBF5EB] px-3 py-2 text-[11px] text-[#3A2F26] placeholder:text-[#B09A82] focus:border-[#C6A46C] focus:outline-none focus:ring-0"
+            className="w-full resize-none ink-input text-[11px] placeholder:text-[#B09A82]"
           />
         </div>
         <button
           type="button"
           onClick={handleSend}
           disabled={loading || !input.trim()}
-          className="mt-1 inline-flex h-9 items-center justify-center rounded-full bg-[#C6A46C] px-4 text-[11px] font-medium text-[#fff9ee] shadow-[0_4px_12px_rgba(198,164,108,0.25)] transition-colors hover:bg-[#B38B43] disabled:cursor-not-allowed disabled:bg-[#D5C3A4] md:mt-0"
+          className="ink-button-primary mt-1 h-9 px-4 py-0 text-[11px] disabled:cursor-not-allowed disabled:opacity-55 md:mt-0"
         >
           {loading ? "参问中…" : "继续参问"}
         </button>

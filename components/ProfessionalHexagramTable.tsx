@@ -22,7 +22,7 @@ export function ProfessionalHexagramTable({
   const linesTopDown = [...result.lines].sort((a, b) => b.index - a.index);
 
   return (
-    <section className="rounded-2xl border border-[#e0d2b8] bg-[#faf5ea]/95 p-5 text-xs text-[#4a3a2a] md:p-6">
+    <section className="ink-panel p-5 text-xs text-[#4a3a2a] md:p-6">
       <header className="mb-3 space-y-1">
         <div className="flex flex-wrap items-baseline gap-3">
           <div>

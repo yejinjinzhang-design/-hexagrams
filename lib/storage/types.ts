@@ -33,6 +33,18 @@ export type PostAnalysisStructuredResult = {
   detailedSections: PostAnalysisDetailSection[];
 };
 
+/** 多模型流水线单步（仅服务端存储 / 管理接口 / 日志，不对用户前端展示） */
+export type DivinationPipelineTraceStep = {
+  phase: "初稿" | "审稿" | "裁决";
+  provider: "deepseek" | "gemini";
+  /** 该步产出或说明（初稿可能为节选） */
+  body: string;
+};
+
+export type DivinationPipelineTrace = {
+  steps: DivinationPipelineTraceStep[];
+};
+
 /** 「验证前事」分层输出（模型 JSON → 前端分区展示） */
 export type PreCheckStructuredResult = {
   /** 第一层：先观其应式前情总览，高密度、少术数专名 */
@@ -60,6 +72,11 @@ export interface StoredDivinationSession {
     calendar?: "lunar";
     numberInput?: string;
     manualCoins?: CoinSide[][];
+    specified?: {
+      upperNum: number;
+      lowerNum: number;
+      movingLines: number[];
+    };
     // 兼容旧版本字段（当前界面可能已不再使用）
     numbers?: [number, number, number];
   };
@@ -85,6 +102,12 @@ export interface StoredDivinationSession {
   /** 前事验证扁平正文（由 preCheckResult 生成或与旧版兼容的纯文本） */
   preCheckResultText?: string;
 
+  /** 多模型互审内部摘要（仅服务端；勿下发用户端） */
+  preCheckAuditSummary?: string;
+
+  /** 初稿 / 审稿 / 裁决 过程（仅服务端；勿下发用户端） */
+  preCheckPipelineTrace?: DivinationPipelineTrace;
+
   /** 用户对前验的补述与校正 */
   preAnalysisFeedback?: PreAnalysisFeedbackBundle;
 
@@ -92,6 +115,11 @@ export interface StoredDivinationSession {
   postAnalysisResult?: PostAnalysisStructuredResult;
   /** 走势分析扁平正文，供追问 API 等注入 */
   postAnalysisFlatText?: string;
+
+  /** 后事分析互审内部摘要（仅服务端） */
+  postAnalysisAuditSummary?: string;
+
+  postAnalysisPipelineTrace?: DivinationPipelineTrace;
 
   userRating?: number;
   userFeedback?: string;

@@ -9,7 +9,8 @@ export type DivinationMethod =
   | "coin"
   | "number"
   | "lunarDate"
-  | "manual";
+  | "manual"
+  | "specified";
 
 /**
  * 与 `components/divination-coins` 一致：
@@ -17,6 +18,19 @@ export type DivinationMethod =
  * - `back` = 汉字面 = 反（记 2）
  */
 export type CoinSide = "front" | "back";
+
+export type TrigramName = "乾" | "兑" | "离" | "震" | "巽" | "坎" | "艮" | "坤";
+
+export const TRIGRAM_OPTIONS: Array<{ num: number; name: TrigramName }> = [
+  { num: 1, name: "乾" },
+  { num: 2, name: "兑" },
+  { num: 3, name: "离" },
+  { num: 4, name: "震" },
+  { num: 5, name: "巽" },
+  { num: 6, name: "坎" },
+  { num: 7, name: "艮" },
+  { num: 8, name: "坤" },
+];
 
 export type DivinationUnifiedResult = {
   method: DivinationMethod;
@@ -53,6 +67,11 @@ export type DivinationUnifiedResult = {
     numberInput?: string;
     calendar?: "lunar";
     manualCoins?: CoinSide[][];
+    specified?: {
+      upperNum: number;
+      lowerNum: number;
+      movingLines: number[];
+    };
   };
 };
 
@@ -66,7 +85,7 @@ function mod6Special(total: number): number {
   return r === 0 ? 6 : r;
 }
 
-const TRIGRAM_BY_NUM: Record<number, "乾" | "兑" | "离" | "震" | "巽" | "坎" | "艮" | "坤"> =
+const TRIGRAM_BY_NUM: Record<number, TrigramName> =
   {
     1: "乾",
     2: "兑",
@@ -80,7 +99,7 @@ const TRIGRAM_BY_NUM: Record<number, "乾" | "兑" | "离" | "震" | "巽" | "�
 
 // 三爻自下而上（阳=1，阴=0）
 const TRIGRAM_BITS_BY_NAME: Record<
-  "乾" | "兑" | "离" | "震" | "巽" | "坎" | "艮" | "坤",
+  TrigramName,
   "111" | "110" | "101" | "100" | "011" | "010" | "001" | "000"
 > = {
   乾: "111",
@@ -270,6 +289,74 @@ function buildUnifiedFromHexNums(params: {
     upperGua: { num: upperNum, name: upperGuaName },
     lowerGua: { num: lowerNum, name: lowerGuaName },
     rawInput,
+  };
+}
+
+export function deriveHexagramFromSpecified(params: {
+  upperNum: number;
+  lowerNum: number;
+  movingLines: number[];
+  timestamp?: string;
+}): DivinationUnifiedResult {
+  const { upperNum, lowerNum, timestamp = new Date().toISOString() } = params;
+  const upperGuaName = TRIGRAM_BY_NUM[upperNum];
+  const lowerGuaName = TRIGRAM_BY_NUM[lowerNum];
+  if (!upperGuaName || !lowerGuaName) {
+    throw new Error(`Invalid trigram numbers: upper=${upperNum}, lower=${lowerNum}`);
+  }
+
+  const movingSet = new Set(
+    params.movingLines.filter((line) => Number.isInteger(line) && line >= 1 && line <= 6)
+  );
+  const upperBits = TRIGRAM_BITS_BY_NAME[upperGuaName].split("");
+  const lowerBits = TRIGRAM_BITS_BY_NAME[lowerGuaName].split("");
+  const polarities: LinePolarity[] = [];
+
+  for (let i = 0; i < 6; i++) {
+    const bit = i < 3 ? lowerBits[i] : upperBits[i - 3];
+    polarities.push(bit === "1" ? "yang" : "yin");
+  }
+
+  const diceSums = polarities.map((pol, idx) => {
+    const linePos = idx + 1;
+    if (movingSet.has(linePos)) {
+      return pol === "yin" ? 6 : 9;
+    }
+    return pol === "yang" ? 7 : 8;
+  });
+  const div = computeDivinationResult(diceSums);
+
+  return {
+    method: "specified",
+    timestamp,
+    diceSums,
+    lines: div.lines.map((l) => ({
+      index: l.index,
+      yinYang: l.polarity,
+      moving: l.moving,
+      yaoType: yaoTypeFromKind(l.kind),
+    })),
+    primaryHexagram: {
+      name: div.originalHexagram.name ?? "未知卦",
+      code: div.originalHexagram.binaryCode,
+    },
+    changedHexagram: div.changedHexagram
+      ? {
+          name: div.changedHexagram.name ?? "未知卦",
+          code: div.changedHexagram.binaryCode,
+        }
+      : undefined,
+    movingLines: div.movingLines,
+    movingLine: div.movingLines.length === 1 ? div.movingLines[0] : undefined,
+    upperGua: { num: upperNum, name: upperGuaName },
+    lowerGua: { num: lowerNum, name: lowerGuaName },
+    rawInput: {
+      specified: {
+        upperNum,
+        lowerNum,
+        movingLines: div.movingLines,
+      },
+    },
   };
 }
 

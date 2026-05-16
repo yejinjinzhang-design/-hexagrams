@@ -74,7 +74,7 @@ export function PreAnalysisFeedbackSection({
   };
 
   return (
-    <section className="w-full max-w-[1120px] rounded-[16px] border border-[#E5D8C7] bg-[#F6EFE3] p-4 text-xs text-[#3A2F26] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] md:mx-auto md:p-5">
+    <section className="w-full max-w-[1120px] ink-panel p-4 text-xs text-[#3A2F26] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] md:mx-auto md:p-5">
       <header className="mb-3 border-b border-[#E2D3BF] pb-2">
         <h2 className="font-ritual-title text-sm font-medium tracking-[0.2em] text-[#5c3a2a] md:text-[15px]">
           前情补述

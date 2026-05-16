@@ -117,7 +117,7 @@ export function AdminDashboardClient() {
   const loadAll = useCallback(async (keyOverride?: string) => {
     const key = (keyOverride ?? effectiveKey).trim();
     if (!key) {
-      setError("请输入 ADMIN_ANALYTICS_KEY");
+      setError("请输入后台密码");
       return;
     }
     setLoading(true);
@@ -210,7 +210,7 @@ export function AdminDashboardClient() {
           {!savedKey && (
             <input
               type="password"
-              placeholder="ADMIN_ANALYTICS_KEY"
+              placeholder="后台密码"
               value={adminKey}
               onChange={(e) => setAdminKey(e.target.value)}
               className="w-56 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500"
@@ -234,7 +234,7 @@ export function AdminDashboardClient() {
               }}
               className="text-sm text-slate-500 underline"
             >
-              清除密钥
+              清除密码
             </button>
           )}
         </div>

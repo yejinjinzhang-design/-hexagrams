@@ -35,10 +35,8 @@ function SectionShell({
 }) {
   return (
     <div
-      className={`rounded-md border px-3 py-3 md:px-4 md:py-3.5 ${
-        emphasis
-          ? "border-[#D4C4A8] bg-[#faf6ee] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]"
-          : "border-[#E5D8C7]/80 bg-[#f7efe0]/90"
+      className={`ink-subpanel px-3 py-3 md:px-4 md:py-3.5 ${
+        emphasis ? "shadow-[0_8px_22px_rgba(66,49,34,0.04)]" : "ink-subpanel-muted"
       } ${lead ? "md:py-4" : ""}`}
     >
       <h3 className="font-ritual-title text-[12px] font-medium tracking-[0.12em] text-[#5c3a2a] md:text-[13px]">
@@ -192,7 +190,7 @@ export function PreCheckPage({
           )}
         </SectionShell>
 
-        <details className="group rounded-md border border-[#D4C4A8]/90 bg-[#f4ead8]/80">
+        <details className="group ink-subpanel overflow-hidden">
           <summary className="cursor-pointer list-none px-3 py-2.5 font-ritual-title text-[11px] font-medium tracking-[0.15em] text-[#6b5235] transition-colors marker:content-none md:px-4 md:text-[12px] [&::-webkit-details-marker]:hidden">
             <span className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
               <span className="inline-flex items-center gap-1.5">
@@ -249,8 +247,8 @@ export function PreCheckPage({
 
   return (
     <div className="mx-auto w-full max-w-[1120px] space-y-5">
-      <section className="w-full rounded-[16px] border border-[#E5D8C7] bg-[#F8F3EA] p-4 text-xs text-[#3A2F26] md:mx-auto md:p-5">
-        <div className="flex flex-col gap-0.5 border-b border-[#E5D8C7]/60 pb-3">
+      <section className="ink-panel w-full p-4 text-xs text-[#3A2F26] md:mx-auto md:p-5">
+        <div className="flex flex-col gap-0.5 border-b border-[#E5D8C7]/45 pb-3">
           <h2 className="font-ritual-title text-sm font-medium tracking-[0.2em] text-[#5c3a2a] md:text-[15px]">
             先观应象
           </h2>
@@ -259,7 +257,9 @@ export function PreCheckPage({
           </p>
         </div>
 
-        <div className="mt-4 space-y-3">{bodyContent}</div>
+        <div className="mt-4 space-y-3">
+          {bodyContent}
+        </div>
       </section>
 
       <PreAnalysisFeedbackSection
@@ -269,12 +269,12 @@ export function PreCheckPage({
         divinationSessionId={sessionId}
       />
 
-      <div className="relative flex flex-col items-stretch gap-3 rounded-[14px] bg-[#faf6ee]/95 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] md:flex-row md:justify-center md:px-4 md:py-4">
+      <div className="ink-panel relative flex flex-col items-stretch gap-3 px-3 py-3 md:flex-row md:justify-center md:px-4 md:py-4">
         <button
           type="button"
           onClick={() => void handleConfirm()}
           disabled={loading || continuing}
-          className="inline-flex h-11 w-full items-center justify-center whitespace-nowrap rounded-full bg-[#C6A46C] px-6 py-[10px] text-center text-[14px] font-semibold tracking-[0.04em] text-[#2e2418] shadow-[0_2px_8px_rgba(62,49,39,0.12)] transition-all hover:bg-[#B89459] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed md:w-auto md:min-w-[240px]"
+          className="ink-button-primary h-11 w-full text-center text-[14px] tracking-[0.04em] disabled:opacity-60 md:w-auto md:min-w-[240px]"
         >
           {continuing ? "正在收纳前情…" : "与我所处相合，可再断其后"}
         </button>
@@ -282,7 +282,7 @@ export function PreCheckPage({
           type="button"
           onClick={onRestart}
           disabled={continuing}
-          className="inline-flex h-11 w-full items-center justify-center whitespace-nowrap rounded-full border border-[#b8925a] bg-[#fffdf8] px-6 py-[10px] text-center text-[14px] font-medium tracking-[0.04em] text-[#3A2F26] transition-all hover:bg-[#f5ecdf] disabled:opacity-50 md:w-auto md:min-w-[240px]"
+          className="ink-button-secondary h-11 w-full text-center text-[14px] tracking-[0.04em] disabled:opacity-50 md:w-auto md:min-w-[240px]"
         >
           所应未显之象，可再起一卦
         </button>
