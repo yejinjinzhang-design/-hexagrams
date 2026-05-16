@@ -37,6 +37,35 @@ type MethodsPayload = {
   methods: Array<{ method: string; label: string; count: number }>;
 };
 
+type DivinationSessionRow = {
+  id: string;
+  createdAt: string;
+  castTime: string | null;
+  question: string;
+  method: string;
+  originalHexagram: string;
+  changedHexagram: string | null;
+  movingLines: number[];
+  boardSummary: {
+    benGua: string;
+    bianGua: string | null;
+    shiPosition: number;
+    yingPosition: number;
+  } | null;
+  hasPreCheck: boolean;
+  hasPostAnalysis: boolean;
+  preCheckFit: "matched" | "mismatched" | null;
+  hasPreAnalysisFeedback: boolean;
+  preAnalysisFeedbackCount: number;
+  hasFollowup: boolean;
+  followupCount: number;
+  resultUrl: string;
+};
+
+type DivinationSessionsPayload = {
+  sessions: DivinationSessionRow[];
+};
+
 const STORAGE_KEY = "admin_analytics_key";
 
 function BarList({
@@ -109,6 +138,9 @@ export function AdminDashboardClient() {
   const [funnelToday, setFunnelToday] = useState<Funnel | null>(null);
   const [funnel7, setFunnel7] = useState<Funnel | null>(null);
   const [methods, setMethods] = useState<MethodsPayload | null>(null);
+  const [divinationSessions, setDivinationSessions] = useState<
+    DivinationSessionRow[]
+  >([]);
   const [trendTab, setTrendTab] = useState<7 | 30>(7);
   const hydratedRef = useRef(false);
 
@@ -124,7 +156,7 @@ export function AdminDashboardClient() {
     setError(null);
     const headers = { "x-admin-key": key };
     try {
-      const [o, t7, t30, ft, f7, m] = await Promise.all([
+      const [o, t7, t30, ft, f7, m, s] = await Promise.all([
         fetch("/api/admin/analytics/overview", { headers }).then((r) => {
           if (!r.ok) throw new Error(`overview ${r.status}`);
           return r.json() as Promise<Overview>;
@@ -153,6 +185,12 @@ export function AdminDashboardClient() {
           if (!r.ok) throw new Error(`methods ${r.status}`);
           return r.json() as Promise<MethodsPayload>;
         }),
+        fetch("/api/admin/divination-sessions?limit=30", { headers }).then(
+          (r) => {
+            if (!r.ok) throw new Error(`sessions ${r.status}`);
+            return r.json() as Promise<DivinationSessionsPayload>;
+          }
+        ),
       ]);
       setOverview(o);
       setTrends7(t7);
@@ -160,6 +198,7 @@ export function AdminDashboardClient() {
       setFunnelToday(ft);
       setFunnel7(f7);
       setMethods(m);
+      setDivinationSessions(s.sessions);
       try {
         sessionStorage.setItem(STORAGE_KEY, key);
         setSavedKey(key);
@@ -270,6 +309,104 @@ export function AdminDashboardClient() {
                 <div className="text-xs font-medium text-slate-500">{c.label}</div>
                 <div className="mt-2 text-3xl font-semibold tabular-nums text-slate-900">
                   {c.value}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {divinationSessions.length > 0 && (
+        <section>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              最近问卦记录
+            </h2>
+            <span className="text-xs text-slate-400">
+              仅记录问题、卦象与用户交互状态，不展示解读正文
+            </span>
+          </div>
+          <div className="space-y-3">
+            {divinationSessions.map((row) => (
+              <div
+                key={row.id}
+                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <span>{new Date(row.createdAt).toLocaleString("zh-CN")}</span>
+                      <span>·</span>
+                      <span>{row.method}</span>
+                      <span>·</span>
+                      <span>
+                        {row.originalHexagram}
+                        {row.changedHexagram ? ` → ${row.changedHexagram}` : ""}
+                      </span>
+                      <span>·</span>
+                      <span>
+                        {row.movingLines.length
+                          ? `${row.movingLines.join("、")}爻动`
+                          : "静卦"}
+                      </span>
+                    </div>
+                    <p className="break-words text-sm font-medium text-slate-900">
+                      {row.question}
+                    </p>
+                    {row.boardSummary && (
+                      <p className="mt-2 text-xs text-slate-500">
+                        世爻第 {row.boardSummary.shiPosition || "未标"} 爻，应爻第{" "}
+                        {row.boardSummary.yingPosition || "未标"} 爻
+                      </p>
+                    )}
+                    <div className="mt-3 grid gap-2 text-xs text-slate-600 md:grid-cols-2">
+                      <div className="rounded-lg bg-slate-50 p-2">
+                        前事反馈：
+                        {row.preCheckFit === "matched"
+                          ? "相合"
+                          : row.preCheckFit === "mismatched"
+                            ? "不合"
+                            : "未选择"}
+                      </div>
+                      <div className="rounded-lg bg-slate-50 p-2">
+                        前事补充：
+                        {row.hasPreAnalysisFeedback
+                          ? `有，${row.preAnalysisFeedbackCount} 次`
+                          : "无"}
+                      </div>
+                      <div className="rounded-lg bg-slate-50 p-2">
+                        后续追问：{row.hasFollowup ? `有，${row.followupCount} 次` : "无"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap gap-2 text-xs">
+                    <span
+                      className={`rounded-full px-2 py-1 ${
+                        row.hasPreCheck
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {row.hasPreCheck ? "已前验" : "未前验"}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-1 ${
+                        row.hasPostAnalysis
+                          ? "bg-indigo-50 text-indigo-700"
+                          : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {row.hasPostAnalysis ? "已后析" : "未后析"}
+                    </span>
+                    <a
+                      href={row.resultUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full bg-slate-900 px-3 py-1 text-white"
+                    >
+                      查看
+                    </a>
+                  </div>
                 </div>
               </div>
             ))}

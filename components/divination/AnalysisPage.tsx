@@ -12,6 +12,9 @@ import { FollowUpChatSection } from "./FollowUpChatSection";
 
 interface AnalysisPageProps {
   sessionId: string;
+  initialAnalysis?: PostAnalysisStructuredResult | null;
+  onAnalysisLoaded?: (analysis: PostAnalysisStructuredResult) => void;
+  onBackToPrecheck?: () => void;
 }
 
 function LayerBlock({
@@ -54,16 +57,26 @@ function LayerBlock({
   );
 }
 
-export function AnalysisPage({ sessionId }: AnalysisPageProps) {
+export function AnalysisPage({
+  sessionId,
+  initialAnalysis,
+  onAnalysisLoaded,
+  onBackToPrecheck,
+}: AnalysisPageProps) {
   const [analysis, setAnalysis] = useState<PostAnalysisStructuredResult | null>(
-    null
+    initialAnalysis ?? null
   );
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(!initialAnalysis);
   const analysisViewedRef = useRef(false);
 
   const stripFullStop = (s: string) => s.replaceAll("。", "");
 
   useEffect(() => {
+    if (initialAnalysis) {
+      setAnalysis(initialAnalysis);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     const run = async () => {
       setLoading(true);
@@ -82,18 +95,18 @@ export function AnalysisPage({ sessionId }: AnalysisPageProps) {
           const reparsed = parsePostAnalysisStructuredContent(
             data.analysis.summaryText
           );
-          setAnalysis(
-            reparsed
+          const next = reparsed
               ? finalizePostAnalysisResult(reparsed, data.analysis.summaryText)
-              : data.analysis
-          );
+              : data.analysis;
+          setAnalysis(next);
+          onAnalysisLoaded?.(next);
         } else if (data.text?.trim()) {
-          setAnalysis(
-            finalizePostAnalysisResult(
-              parsePostAnalysisStructuredContent(data.text),
-              data.text.trim()
-            )
+          const next = finalizePostAnalysisResult(
+            parsePostAnalysisStructuredContent(data.text),
+            data.text.trim()
           );
+          setAnalysis(next);
+          onAnalysisLoaded?.(next);
         } else {
           setAnalysis(null);
         }
@@ -109,7 +122,7 @@ export function AnalysisPage({ sessionId }: AnalysisPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [initialAnalysis, onAnalysisLoaded, sessionId]);
 
   useEffect(() => {
     if (loading || analysisViewedRef.current) return;
@@ -211,13 +224,24 @@ export function AnalysisPage({ sessionId }: AnalysisPageProps) {
   return (
     <>
       <section className="ink-panel w-full max-w-[1120px] p-4 text-xs text-[#3A2F26] md:mx-auto md:p-5">
-        <div className="flex flex-col gap-0.5 border-b border-[#E5D8C7]/45 pb-3">
-          <h2 className="font-ritual-title text-sm font-medium tracking-[0.2em] text-[#5c3a2a] md:text-[15px]">
-            再断其后
-          </h2>
-          <p className="text-[11px] leading-relaxed text-[#7a6751] md:text-[12px]">
-            前象既合，方可再推其后
-          </p>
+        <div className="flex flex-col gap-3 border-b border-[#E5D8C7]/45 pb-3 md:flex-row md:items-start md:justify-between">
+          <div className="flex flex-col gap-0.5">
+            <h2 className="font-ritual-title text-sm font-medium tracking-[0.2em] text-[#5c3a2a] md:text-[15px]">
+              再断其后
+            </h2>
+            <p className="text-[11px] leading-relaxed text-[#7a6751] md:text-[12px]">
+              前象既合，方可再推其后
+            </p>
+          </div>
+          {onBackToPrecheck ? (
+            <button
+              type="button"
+              onClick={onBackToPrecheck}
+              className="ink-button-secondary h-9 px-4 py-0 text-[11px]"
+            >
+              回看前事
+            </button>
+          ) : null}
         </div>
 
         <div className="mt-4 space-y-3">

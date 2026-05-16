@@ -69,9 +69,6 @@ export default function HomePage() {
       <section className="mb-8 space-y-3 md:mb-10">
         <p className="ink-eyebrow">起念成卦</p>
         <h1 className="ink-page-title">六爻起卦</h1>
-        <p className="max-w-[520px] text-[12px] leading-relaxed text-[#8a755a] md:text-[13px]">
-          一事一念，取其当下。把问题写清，卦象才有可照之处。
-        </p>
       </section>
 
       <section className="ink-panel p-5 md:px-9 md:py-8">

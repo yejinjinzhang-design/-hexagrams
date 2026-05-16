@@ -17,6 +17,7 @@ import type {
 import { buildBoardFactSheet } from "@/lib/analysis/board-facts";
 import { orchestratePostAnalysisLlm } from "@/lib/analysis/orchestrator";
 import { LIUYAO_READING_ORDER_GUIDE } from "@/lib/analysis/prompts";
+import { formatLiuyaoKnowledgeForPrompt } from "@/lib/knowledge/liuyao-local-rules";
 import { isDeepseekConfigured } from "@/lib/llm/deepseek";
 import { isGeminiConfigured } from "@/lib/llm/gemini";
 
@@ -91,6 +92,10 @@ export async function POST(request: Request) {
       feedbackBlockRaw ||
       session.preAnalysisFeedback?.summary?.trim() ||
       "";
+    const knowledgeBlock = formatLiuyaoKnowledgeForPrompt({
+      board,
+      question: userInput.question,
+    });
 
     const system = `
 你是一位精通六爻断卦的老师傅。
@@ -127,6 +132,8 @@ ${LEAD_LAYER_PROSE_STYLE_BLOCK}
 ${userInput.question}
 
 ${boardFacts}
+
+${knowledgeBlock}
 
 【基础信息】
 - 出生年份：${userInput.birthYear}

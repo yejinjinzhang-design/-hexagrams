@@ -19,6 +19,7 @@ import type {
 import { buildBoardFactSheet } from "@/lib/analysis/board-facts";
 import { orchestratePrecheckLlm } from "@/lib/analysis/orchestrator";
 import { LIUYAO_READING_ORDER_GUIDE } from "@/lib/analysis/prompts";
+import { formatLiuyaoKnowledgeForPrompt } from "@/lib/knowledge/liuyao-local-rules";
 import { isDeepseekConfigured } from "@/lib/llm/deepseek";
 import { isGeminiConfigured } from "@/lib/llm/gemini";
 
@@ -84,6 +85,10 @@ export async function POST(request: Request) {
 
     const questionProfile = classifyPrecheckQuestion(userInput.question);
     const profileBlock = formatPrecheckProfileForPrompt(questionProfile);
+    const knowledgeBlock = formatLiuyaoKnowledgeForPrompt({
+      board,
+      question: userInput.question,
+    });
 
     const system = `
 你是一位精通六爻断卦的老师傅。
@@ -99,6 +104,12 @@ ${PRECHECK_VAGUE_PHRASING_BAN}
 每一个「状态」判断，都要尽量用可观察情境落地（例如已投递、已面谈、已延期一次、对方已读不回、口头说法与实际凭据不一致、心里有虚处怕被追问等），再用卦爻收束依据。
 
 ${LIUYAO_READING_ORDER_GUIDE}
+
+【工作类问题取用专则】
+若用户所问属于求职、工作、离职、跳槽、offer、岗位、上级、项目或职业变动，验证前事时必须先判断本卦有没有“工作之象”，不可一上来只写情绪或笼统阻碍。
+取用次序为：先看官鬼，官鬼主岗位、职责、录用、上级、压力、制度与工作本体；再看父母，父母主合同、offer、文书、流程、资质、通知、凭据与保护层；再看世爻代表求测者当前状态，应爻代表公司、岗位、对接方或外部环境；最后看动爻如何冲合生克官鬼、父母、世应。
+若官鬼不显、官鬼受克、空亡、伏藏，或父母空破受克，须优先核验“当前是否没有稳定工作、岗位未实、录用/合同/流程没有落地、工作名分或保护层不稳”。若财爻发动或成势而克制父母，即财坏父母，不要只写“利益影响文书”，在问工作时要先考虑：现实利益、薪资资源、生活压力或个人取舍冲掉了岗位凭据与流程保护，常可对应无工作、离职后空窗、offer不稳、入职手续未成、合同/证明不足，或明面有说法但实际没有落到工作名分上。
+这些判断仍须看旺衰、月日、动化、世应承受关系，不可机械套断；但若卦中此象明显，要先把它读出来，再继续分析原因、阶段与后续验证点。
 
 【核心目标】
 最值得先核对的是：这张卦最明显在显什么。它可能正面回应「用户原问题」，也可能先显出问卦者/对方/环境中的另一层状态，如心虚、隐情、怕被追问、文书凭据不足、口舌消息、旧事拖住、压力冲突等。
@@ -137,6 +148,8 @@ ${profileBlock}
 
 ${boardFacts}
 
+${knowledgeBlock}
+
 【基础信息】
 - 出生年份：${userInput.birthYear}
 - 性别：${userInput.gender}
@@ -166,9 +179,10 @@ ${benLines}
 
 【生成步骤（内化执行，勿向用户展示步骤名）】
 Step 1：从用户原话中把握核心主题，但不要预设卦一定正面回答此主题。
-Step 2：先查世、应、动爻各临何六亲、六神，彼此是否生克冲合刑害，动化后是否回头生克、化进退、入空伏藏。
-Step 3：由这些作用关系先判断「这张卦在讲什么」，包括可能不完全围绕原问题的状态；再对照上文「本类问题优先核验的前情维度」与「可核验输出要求」，选出最该让用户先对号入座的若干条作为叙述主轴。
-Step 4：用卦象支撑每一条具体前情推验；禁止用「已有酝酿」「非初念」等空句代替爻象依据。
+Step 2：若是工作类问题，先取官鬼、父母为用，看有没有岗位、录用、合同、流程、凭据与保护层之象；再查这些用神是否空伏、受克、被财坏、被兄弟竞夺或被动爻冲动。
+Step 3：再查世、应、动爻各临何六亲、六神，彼此是否生克冲合刑害，动化后是否回头生克、化进退、入空伏藏。
+Step 4：由这些作用关系先判断「这张卦在讲什么」，包括可能不完全围绕原问题的状态；再对照上文「本类问题优先核验的前情维度」与「可核验输出要求」，选出最该让用户先对号入座的若干条作为叙述主轴。
+Step 5：用卦象支撑每一条具体前情推验；禁止用「已有酝酿」「非初念」等空句代替爻象依据。
 
 【验收标准（生成前自检，勿输出自检文字）】
 须先完成核卦：卦名、变卦、动爻、世应、六亲干支、伏神、空亡必须与「核卦清单」一致。

@@ -13,10 +13,14 @@ import { PreAnalysisFeedbackSection } from "@/components/divination/pre-analysis
 
 interface PreCheckPageProps {
   sessionId: string;
+  /** 已生成的前事结果；用于从后事页返回时直接展示，不重新生成 */
+  initialPreCheck?: PreCheckStructuredResult | null;
   /** 若会话中已有补述（例如返回同页），用于还原 */
   initialPreAnalysisFeedback?: PreAnalysisFeedbackBundle | null;
+  onPreCheckLoaded?: (preCheck: PreCheckStructuredResult) => void;
   onConfirm: () => void;
   onRestart: () => void;
+  onReturnToAnalysis?: () => void;
 }
 
 function SectionShell({
@@ -62,16 +66,19 @@ function SectionShell({
 
 export function PreCheckPage({
   sessionId,
+  initialPreCheck,
   initialPreAnalysisFeedback,
+  onPreCheckLoaded,
   onConfirm,
   onRestart,
+  onReturnToAnalysis,
 }: PreCheckPageProps) {
   const stripFullStop = (s: string) => s.replaceAll("。", "");
 
   const [preCheck, setPreCheck] = useState<PreCheckStructuredResult | null>(
-    null
+    initialPreCheck ?? null
   );
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(!initialPreCheck);
   const [continuing, setContinuing] = useState(false);
   const preValidationTracked = useRef(false);
 
@@ -84,6 +91,11 @@ export function PreCheckPage({
   );
 
   useEffect(() => {
+    if (initialPreCheck) {
+      setPreCheck(initialPreCheck);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     const run = async () => {
       setLoading(true);
@@ -100,12 +112,15 @@ export function PreCheckPage({
         if (cancelled) return;
         if (data.preCheck) {
           setPreCheck(data.preCheck);
+          onPreCheckLoaded?.(data.preCheck);
         } else if (data.text?.trim()) {
-          setPreCheck({
+          const fallback = {
             plainValidationSummary: data.text.trim(),
             reasoningExplanation: "",
             technicalInterpretation: "",
-          });
+          };
+          setPreCheck(fallback);
+          onPreCheckLoaded?.(fallback);
         } else {
           setPreCheck(null);
         }
@@ -121,7 +136,7 @@ export function PreCheckPage({
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [initialPreCheck, onPreCheckLoaded, sessionId]);
 
   useEffect(() => {
     if (loading || !preCheck || preValidationTracked.current) return;
@@ -231,7 +246,11 @@ export function PreCheckPage({
       const res = await fetch("/api/analyze", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, preAnalysisFeedback: bundle }),
+        body: JSON.stringify({
+          sessionId,
+          preAnalysisFeedback: bundle,
+          preCheckFit: "matched",
+        }),
       });
       if (!res.ok) {
         console.error("PATCH preAnalysisFeedback failed", await res.text());
@@ -245,16 +264,54 @@ export function PreCheckPage({
     }
   }, [continuing, feedbackMessages, loading, onConfirm, sessionId]);
 
+  const handleRestart = useCallback(async () => {
+    if (continuing) return;
+    setContinuing(true);
+    try {
+      const summary = buildPreAnalysisFeedbackSummary(feedbackMessages);
+      const bundle: PreAnalysisFeedbackBundle = {
+        messages: feedbackMessages,
+        summary,
+      };
+      await fetch("/api/analyze", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          preAnalysisFeedback: bundle,
+          preCheckFit: "mismatched",
+        }),
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setContinuing(false);
+      onRestart();
+    }
+  }, [continuing, feedbackMessages, onRestart, sessionId]);
+
   return (
     <div className="mx-auto w-full max-w-[1120px] space-y-5">
       <section className="ink-panel w-full p-4 text-xs text-[#3A2F26] md:mx-auto md:p-5">
-        <div className="flex flex-col gap-0.5 border-b border-[#E5D8C7]/45 pb-3">
-          <h2 className="font-ritual-title text-sm font-medium tracking-[0.2em] text-[#5c3a2a] md:text-[15px]">
-            先观应象
-          </h2>
-          <p className="text-[11px] leading-relaxed text-[#7a6751] md:text-[12px]">
-            先照其象，再明其理；若欲深参，可续观其解
-          </p>
+        <div className="flex flex-col gap-3 border-b border-[#E5D8C7]/45 pb-3 md:flex-row md:items-start md:justify-between">
+          <div className="flex flex-col gap-0.5">
+            <h2 className="font-ritual-title text-sm font-medium tracking-[0.2em] text-[#5c3a2a] md:text-[15px]">
+              先观应象
+            </h2>
+            <p className="text-[11px] leading-relaxed text-[#7a6751] md:text-[12px]">
+              先照其象，再明其理；若欲深参，可续观其解
+            </p>
+          </div>
+          {onReturnToAnalysis ? (
+            <button
+              type="button"
+              onClick={onReturnToAnalysis}
+              disabled={continuing}
+              className="ink-button-secondary h-9 px-4 py-0 text-[11px] disabled:opacity-50"
+            >
+              回看后事
+            </button>
+          ) : null}
         </div>
 
         <div className="mt-4 space-y-3">
@@ -280,7 +337,7 @@ export function PreCheckPage({
         </button>
         <button
           type="button"
-          onClick={onRestart}
+          onClick={() => void handleRestart()}
           disabled={continuing}
           className="ink-button-secondary h-11 w-full text-center text-[14px] tracking-[0.04em] disabled:opacity-50 md:w-auto md:min-w-[240px]"
         >

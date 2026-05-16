@@ -155,8 +155,9 @@ export async function PATCH(request: Request) {
     const body = (await request.json()) as {
       sessionId?: string;
       preAnalysisFeedback?: PreAnalysisFeedbackBundle;
+      preCheckFit?: "matched" | "mismatched";
     };
-    const { sessionId, preAnalysisFeedback } = body;
+    const { sessionId, preAnalysisFeedback, preCheckFit } = body;
     if (!sessionId || typeof sessionId !== "string") {
       return NextResponse.json({ error: "缺少 sessionId" }, { status: 400 });
     }
@@ -164,8 +165,13 @@ export async function PATCH(request: Request) {
     if (!current) {
       return NextResponse.json({ error: "会话不存在" }, { status: 404 });
     }
-    if (preAnalysisFeedback) {
-      await updateSession(sessionId, { preAnalysisFeedback });
+    const patch: Parameters<typeof updateSession>[1] = {};
+    if (preAnalysisFeedback) patch.preAnalysisFeedback = preAnalysisFeedback;
+    if (preCheckFit === "matched" || preCheckFit === "mismatched") {
+      patch.preCheckFit = preCheckFit;
+    }
+    if (Object.keys(patch).length > 0) {
+      await updateSession(sessionId, patch);
     }
     return NextResponse.json({ ok: true });
   } catch (e) {

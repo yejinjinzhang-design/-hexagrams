@@ -6,7 +6,11 @@ import { LoadingState } from "@/components/LoadingState";
 import { PreCheckPage } from "../../components/divination/PreCheckPage";
 import { AnalysisPage } from "../../components/divination/AnalysisPage";
 import { TraditionalHexagramLayout } from "../../components/divination/TraditionalHexagramLayout";
-import type { StoredDivinationSession } from "@/lib/storage/types";
+import type {
+  PostAnalysisStructuredResult,
+  PreCheckStructuredResult,
+  StoredDivinationSession,
+} from "@/lib/storage/types";
 
 export default function ResultPageClient() {
   const searchParams = useSearchParams();
@@ -19,6 +23,10 @@ export default function ResultPageClient() {
   const [stage, setStage] = useState<"casted" | "precheck" | "analysis">(
     "precheck"
   );
+  const [cachedPreCheck, setCachedPreCheck] =
+    useState<PreCheckStructuredResult | null>(null);
+  const [cachedAnalysis, setCachedAnalysis] =
+    useState<PostAnalysisStructuredResult | null>(null);
 
   useEffect(() => {
     if (!sessionId) {
@@ -39,6 +47,8 @@ export default function ResultPageClient() {
           throw new Error("未找到对应的占卦记录，请重新起卦。");
         }
         setSession(data.session);
+        setCachedPreCheck(data.session.preCheckResult ?? null);
+        setCachedAnalysis(data.session.postAnalysisResult ?? null);
       } catch (e) {
         setError(
           e instanceof Error ? e.message : "加载结果时出现问题，请稍后重试。"
@@ -88,15 +98,27 @@ export default function ResultPageClient() {
           <PreCheckPage
             key={sessionId}
             sessionId={sessionId}
+            initialPreCheck={cachedPreCheck ?? session.preCheckResult ?? null}
             initialPreAnalysisFeedback={session.preAnalysisFeedback}
+            onPreCheckLoaded={setCachedPreCheck}
             onConfirm={() => setStage("analysis")}
             onRestart={() => router.push("/")}
+            onReturnToAnalysis={
+              cachedAnalysis || session.postAnalysisResult
+                ? () => setStage("analysis")
+                : undefined
+            }
           />
         )}
 
         {/* C. 正式分析阶段 */}
         {stage === "analysis" && sessionId && (
-          <AnalysisPage sessionId={sessionId} />
+          <AnalysisPage
+            sessionId={sessionId}
+            initialAnalysis={cachedAnalysis ?? session.postAnalysisResult ?? null}
+            onAnalysisLoaded={setCachedAnalysis}
+            onBackToPrecheck={() => setStage("precheck")}
+          />
         )}
       </>
     );

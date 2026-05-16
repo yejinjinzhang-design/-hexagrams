@@ -32,6 +32,18 @@ const COIN_TEST_COMBOS: [CoinSide, CoinSide, CoinSide][] = [
   ["back", "front", "back"],
 ];
 
+// 三爻自下而上：阳=1，阴=0；显示时反转为自上而下。
+const TRIGRAM_BITS_BY_NUM: Record<number, string> = {
+  1: "111",
+  2: "110",
+  3: "101",
+  4: "100",
+  5: "011",
+  6: "010",
+  7: "001",
+  8: "000",
+};
+
 function lineKindToLabel(kind: LineKind): string {
   switch (kind) {
     case "lao-yin":
@@ -59,6 +71,34 @@ function yaoPositionLabel(index: number): string {
           : index === 5
             ? "五爻"
             : "上爻";
+}
+
+function TrigramGlyph({
+  num,
+  active,
+}: {
+  num: number;
+  active?: boolean;
+}) {
+  const bits = (TRIGRAM_BITS_BY_NUM[num] ?? "111").split("").reverse();
+  const color = active ? "bg-[#4b3423]" : "bg-[#7a6349]";
+  return (
+    <span className="flex w-7 flex-col gap-[3px]" aria-hidden="true">
+      {bits.map((bit, idx) =>
+        bit === "1" ? (
+          <span
+            key={`${num}-${idx}`}
+            className={`h-[3px] w-full rounded-full ${color}`}
+          />
+        ) : (
+          <span key={`${num}-${idx}`} className="flex h-[3px] w-full gap-[5px]">
+            <span className={`h-full flex-1 rounded-full ${color}`} />
+            <span className={`h-full flex-1 rounded-full ${color}`} />
+          </span>
+        )
+      )}
+    </span>
+  );
 }
 
 export default function DivinationPageClient() {
@@ -522,13 +562,14 @@ export default function DivinationPageClient() {
                             setSpecifiedUpperNum(gua.num);
                             setDiceSums([]);
                           }}
-                          className={`rounded-full border px-3 py-2 text-[12px] transition-colors ${
+                          className={`flex min-h-[42px] items-center justify-center gap-2 rounded-full border px-2 py-2 text-[12px] transition-colors ${
                             active
                               ? "border-[#b08a57] bg-[#efe0c4] text-[#4b3423]"
                               : "border-[#D7C6AA] bg-[#fffaf2]/50 text-[#8B6B3F] hover:bg-[#F0E4D1]"
                           }`}
                         >
-                          {gua.name}
+                          <TrigramGlyph num={gua.num} active={active} />
+                          <span>{gua.name}</span>
                         </button>
                       );
                     })}
@@ -548,13 +589,14 @@ export default function DivinationPageClient() {
                             setSpecifiedLowerNum(gua.num);
                             setDiceSums([]);
                           }}
-                          className={`rounded-full border px-3 py-2 text-[12px] transition-colors ${
+                          className={`flex min-h-[42px] items-center justify-center gap-2 rounded-full border px-2 py-2 text-[12px] transition-colors ${
                             active
                               ? "border-[#b08a57] bg-[#efe0c4] text-[#4b3423]"
                               : "border-[#D7C6AA] bg-[#fffaf2]/50 text-[#8B6B3F] hover:bg-[#F0E4D1]"
                           }`}
                         >
-                          {gua.name}
+                          <TrigramGlyph num={gua.num} active={active} />
+                          <span>{gua.name}</span>
                         </button>
                       );
                     })}

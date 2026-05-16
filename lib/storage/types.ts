@@ -110,6 +110,8 @@ export interface StoredDivinationSession {
 
   /** 用户对前验的补述与校正 */
   preAnalysisFeedback?: PreAnalysisFeedbackBundle;
+  /** 用户对前事验证的选择反馈：相合 / 不合 */
+  preCheckFit?: "matched" | "mismatched";
 
   /** 走势分析结构化结果（再断其后） */
   postAnalysisResult?: PostAnalysisStructuredResult;
@@ -120,6 +122,8 @@ export interface StoredDivinationSession {
   postAnalysisAuditSummary?: string;
 
   postAnalysisPipelineTrace?: DivinationPipelineTrace;
+  /** 卦后追问次数（只记次数，不存追问正文） */
+  followupCount?: number;
 
   userRating?: number;
   userFeedback?: string;

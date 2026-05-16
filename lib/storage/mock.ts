@@ -1,8 +1,9 @@
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "fs/promises";
 import path from "path";
 import type { StoredDivinationSession } from "@/lib/storage/types";
 import {
   isRedisSessionStoreEnabled,
+  redisListSessionIds,
   redisReadSession,
   redisWriteSession,
 } from "@/lib/storage/redis-session";
@@ -105,4 +106,54 @@ export async function getSessionById(
     return fromDisk;
   }
   return null;
+}
+
+export async function listRecentSessions(
+  limit: number = 50
+): Promise<StoredDivinationSession[]> {
+  const safeLimit = Math.max(1, Math.min(limit, 200));
+
+  if (isRedisSessionStoreEnabled()) {
+    const ids = await redisListSessionIds(safeLimit);
+    const rows = await Promise.all(ids.map((id) => getSessionById(id)));
+    return rows
+      .filter((s): s is StoredDivinationSession => Boolean(s))
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+      .slice(0, safeLimit);
+  }
+
+  const fromMemory = [...sessions.values()];
+  const byId = new Map<string, StoredDivinationSession>(
+    fromMemory.map((session) => [session.id, session])
+  );
+
+  try {
+    const dir = getSessionsDir();
+    const files = await readdir(dir);
+    await Promise.all(
+      files
+        .filter((file) => file.endsWith(".json"))
+        .map(async (file) => {
+          try {
+            const raw = await readFile(path.join(dir, file), "utf8");
+            const session = JSON.parse(raw) as StoredDivinationSession;
+            byId.set(session.id, session);
+          } catch {
+            /* skip bad session file */
+          }
+        })
+    );
+  } catch {
+    /* no local session dir yet */
+  }
+
+  return [...byId.values()]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+    .slice(0, safeLimit);
 }

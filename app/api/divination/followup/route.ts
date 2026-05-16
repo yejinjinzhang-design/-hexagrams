@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSessionById } from "@/lib/storage/mock";
+import { getSessionById, updateSession } from "@/lib/storage/mock";
 import { sanitizeAiText } from "@/utils/sanitizeAiText";
 import type { YaoLineBoard } from "@/types/liuyao-board";
 
@@ -286,6 +286,9 @@ ${postAnalysisBlock}
     }
 
     const cleanText = sanitizeAiText(text);
+    await updateSession(sessionId, {
+      followupCount: (session.followupCount ?? 0) + 1,
+    });
     return NextResponse.json({ text: cleanText });
   } catch (error) {
     console.error("[followup] Unexpected ERROR:", error);
