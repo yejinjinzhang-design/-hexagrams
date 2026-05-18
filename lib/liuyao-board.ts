@@ -137,6 +137,50 @@ function mapIndicators(
   }));
 }
 
+type WuXing = "木" | "火" | "土" | "金" | "水";
+
+const GENERATES: Record<WuXing, WuXing> = {
+  木: "火",
+  火: "土",
+  土: "金",
+  金: "水",
+  水: "木",
+};
+
+const CONTROLS: Record<WuXing, WuXing> = {
+  木: "土",
+  土: "水",
+  水: "火",
+  火: "金",
+  金: "木",
+};
+
+function isWuXing(s: string | undefined): s is WuXing {
+  return s === "木" || s === "火" || s === "土" || s === "金" || s === "水";
+}
+
+function liuQinFor(home: WuXing, lineElement: string): string {
+  if (!isWuXing(lineElement)) return "";
+  if (lineElement === home) return "兄弟";
+  if (GENERATES[home] === lineElement) return "子孙";
+  if (GENERATES[lineElement] === home) return "父母";
+  if (CONTROLS[home] === lineElement) return "妻财";
+  if (CONTROLS[lineElement] === home) return "官鬼";
+  return "";
+}
+
+function inferHomeElementFromBenLines(lines: YaoLineBoard[]): WuXing | null {
+  for (const line of lines) {
+    if (!line.liuQin || !isWuXing(line.fiveElement)) continue;
+    const candidates: WuXing[] = ["木", "火", "土", "金", "水"];
+    const matched = candidates.find(
+      (home) => liuQinFor(home, line.fiveElement) === line.liuQin
+    );
+    if (matched) return matched;
+  }
+  return null;
+}
+
 /**
  * 根据 diceSums 与起卦时间构建完整排盘；可选传入 divination 以带卦名。
  */
@@ -223,13 +267,15 @@ export function buildLiuyaoBoard(
   let bianGua: HexagramBoard | null = null;
   if (movingPositions.length > 0 && bianBinary) {
     const bianNaJia = getNaJiaData(transformed, date, dayStem);
+    const homeElement = inferHomeElementFromBenLines(benGuaLines);
     const bianGuaLines: YaoLineBoard[] = bianNaJia.map((line, i) => ({
       index: i + 1,
       naJia: line.stem + line.branch,
       stem: line.stem,
       branch: line.branch,
       fiveElement: line.fiveElement,
-      liuQin: line.liuQin ?? "",
+      // 变卦侧纳甲取变卦干支，但六亲仍以本卦卦宫/我五行为准。
+      liuQin: homeElement ? liuQinFor(homeElement, line.fiveElement) : line.liuQin ?? "",
       sixGod: line.sixGod,
       shiYing: line.shiYing as "世" | "应" | undefined,
       moving: false,
